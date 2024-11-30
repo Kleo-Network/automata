@@ -3,12 +3,12 @@ import { Route, Routes, useNavigate } from 'react-router-dom';
 import { UserData } from './common/interface';
 import Navbar from './navbar/Navbar';
 import useFetch from './common/hooks/useFetch';
-import { HomeComponent } from './pages/home/HomeComponent';
+import HomeComponent from './pages/home/HomeComponent';
 import Processing from './pages/ProfileCards/Processing'
 
 function App(): ReactElement {
   const emptyStringArray: string[] = [];
-  const [slug, setSlug] = useState<string>('');
+
   const [isUserLoading, setIsUserLoading] = useState(false);
 
   /*
@@ -54,49 +54,13 @@ function App(): ReactElement {
   });
   const navigate = useNavigate();
 
-  useEffect(() => {
-    chrome.storage.local.get('user', (storageData) => {
-      if (storageData.user) {
-        setSlug(storageData.user.id);
-      }
-    });
-
-  }, []);
-
-  const GET_USER_DETAIL = 'user/get-user/{slug}';
-  const { fetchData: fetchUserData } = useFetch<UserData>();
-
-  function getUserDetails(slug: string) {
-    return GET_USER_DETAIL.replace('{slug}', slug);
-  }
-
-
-  useEffect(() => {
-    try {
-      setIsUserLoading(true);
-      fetchUserData(getUserDetails(slug), {
-        onSuccessfulFetch(data) {
-          setIsUserLoading(false);
-          if (data) {
-            setUser(data)
-            navigate('/home')
-          }
-        },
-      });
-    } catch (error) {
-      console.error('Error fetching data:', error);
-    }
-  }, [slug]);
-
   return (
     <div className="rounded-xl bg-gray-50">
       <div className="flex flex-col font-inter self-stretch h-full rounded-xl">
 
-        {!isUserLoading && user && (
-          <Routes>
-            <Route path="/home" element={<HomeComponent user={user} />} />
-          </Routes>
-        )}
+        <HomeComponent user={user} />
+
+
       </div>
     </div>
   );
