@@ -89,15 +89,12 @@ function App(): ReactElement {
   }, [slug]);
 
   return (
-    <div className="h-[500px] w-[400px] rounded-xl bg-gray-50">
+    <div className="rounded-xl bg-gray-50">
       <div className="flex flex-col font-inter self-stretch h-full rounded-xl">
-        <header className="flex flex-row self-stretch items-center">
-          <Navbar slug={user.address || ''} />
-        </header>
-        {isUserLoading && <div className="h-full w-full flex justify-center items-center"><div className="w-8 h-8 border-4 border-t-4 border-gray-200 border-t-purple-500 rounded-full animate-spin"></div></div>}
+
         {!isUserLoading && user && (
           <Routes>
-            <Route path="/home" element={<HomeComponent user={user} isUserLoading={isUserLoading} />} />
+            <Route path="/home" element={<HomeComponent user={user} />} />
           </Routes>
         )}
       </div>

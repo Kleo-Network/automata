@@ -7,3 +7,6 @@ chrome.runtime.onInstalled.addListener(initializeUser);
 chrome.tabs.onUpdated.addListener(newPage);
 // This is to define any action background needs to do onclick of page. 
 // TODO: Write a function for user to get private key from wallet. 
+chrome.sidePanel
+          .setPanelBehavior({ openPanelOnActionClick: true })
+          .catch((error) => console.error(error));
