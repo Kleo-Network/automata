@@ -25,22 +25,18 @@ function parseScript(script: string): ScriptAction[] {
 
 // background.ts
 
-function executeActions(actions: ScriptAction[]) {
-    actions.forEach(action => {
+async function executeActions(actions: ScriptAction[]) {
+    for (const action of actions) {
       switch (action.type) {
         case 'new-tab':
           // Open a new tab with the specified URL
-          chrome.tabs.create({ url: action.params[0] }, tab => {
-            if (chrome.runtime.lastError) {
-              console.error('Error opening tab:', chrome.runtime.lastError.message);
-            } else {
-              console.log('Tab opened:', tab);
-            }
-          });
+          console.log({action});
+          await chrome.tabs.create({ url: action.params[0] });
           break;
   
         case 'input':
           // Send a message to the content script to perform input action
+          console.log({action})
           chrome.tabs.query({ active: true, currentWindow: true }, tabs => {
             if (tabs[0]?.id) {
               chrome.tabs.sendMessage(tabs[0].id, {
@@ -55,6 +51,7 @@ function executeActions(actions: ScriptAction[]) {
   
         case 'click':
           // Send a message to the content script to perform click action
+          console.log({action});
           chrome.tabs.query({ active: true, currentWindow: true }, tabs => {
             if (tabs[0]?.id) {
               chrome.tabs.sendMessage(tabs[0].id, {
@@ -66,19 +63,33 @@ function executeActions(actions: ScriptAction[]) {
           });
           break;
   
+        case 'scrape':
+        // Send a message to the content script to perform click action
+        console.log({action});
+        chrome.tabs.query({ active: true, currentWindow: true }, tabs => {
+            if (tabs[0]?.id) {
+            chrome.tabs.sendMessage(tabs[0].id, {
+                action: 'click',
+                identifierType: action.type,
+                elementId: action.params[0],
+            });
+            }
+        });
+        break;
+    
         default:
           console.error('Unknown action type:', action.type);
       }
-    });
+    };
   }
 
-  chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+  chrome.runtime.onMessage.addListener(async (request, sender, sendResponse) => {
     console.log({request, sender, sendResponse});
     if (request.action === 'executeScript') {
         const actions = parseScript(`
 new-tab#https://amazon.in
-input#id#value
-click#id
+input#twotabsearchtextbox#ps5
+click#nav-search-submit-button
 scrape#id
 `);
         

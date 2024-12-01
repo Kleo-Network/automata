@@ -65,10 +65,6 @@ module.exports = {
                 {
                     from: path.resolve('contentScript.js'),
                     to: path.resolve('dist')
-                },
-                {
-                    from: path.resolve('injectedScript.js'),
-                    to: path.resolve('dist')
                 }
             ],
         }),
