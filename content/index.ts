@@ -5,18 +5,43 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     performInput(request.identifierType, request.elementId, request.text);
   } else if (request.action === 'click') {
     performClick(request.identifierType, request.elementId);
+  } else if (request.action === 'scrape') {
+    performScrape(request.identifierType, request.elementId);
   }
 });
 
+function performScrape(identifierType: string, elementId: string) {
+  console.log("debug");
+  let element: HTMLElement | null = null;
+  if (identifierType === 'id') {
+    element = document.getElementById(elementId);
+  } else if (identifierType === 'class') {
+    element = document.querySelector(`.${elementId}`);
+  } else if (identifierType === 'name') {
+    element = document.querySelector(`[name="${elementId}"]`);
+  }
+
+  console.log({element});
+  if (element) {
+    const data = {
+      innerHTML: element.innerHTML,
+      innerText: element.innerText
+    };
+    console.log("scraping done", {element, data});
+  } else {
+    console.error('Element not found for scraping');
+  }
+}
+
 function performInput(identifierType: string, elementId: string, text: string) {
   let element: HTMLElement | null = null;
-  // if (identifierType === 'id') {
+  if (identifierType === 'id') {
     element = document.getElementById(elementId);
-  // } else if (identifierType === 'class') {
-  //   element = document.querySelector(`.${elementId}`);
-  // } else if (identifierType === 'name') {
-  //   element = document.querySelector(`[name="${elementId}"]`);
-  // }
+  } else if (identifierType === 'class') {
+    element = document.querySelector(`.${elementId}`);
+  } else if (identifierType === 'name') {
+    element = document.querySelector(`[name="${elementId}"]`);
+  }
 
   if (element && (element instanceof HTMLInputElement || element instanceof HTMLTextAreaElement)) {
     (element as HTMLInputElement).value = text;
@@ -28,13 +53,13 @@ function performInput(identifierType: string, elementId: string, text: string) {
 
 function performClick(identifierType: string, elementId: string) {
   let element: HTMLElement | null = null;
-  // if (identifierType === 'id') {
+  if (identifierType === 'id') {
     element = document.getElementById(elementId);
-  // } else if (identifierType === 'class') {
-  //   element = document.querySelector(`.${elementId}`);
-  // } else if (identifierType === 'name') {
-  //   element = document.querySelector(`[name="${elementId}"]`);
-  // }
+  } else if (identifierType === 'class') {
+    element = document.querySelector(`.${elementId}`);
+  } else if (identifierType === 'name') {
+    element = document.querySelector(`[name="${elementId}"]`);
+  }
 
   if (element) {
     element.click();

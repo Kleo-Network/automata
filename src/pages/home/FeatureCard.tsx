@@ -12,7 +12,10 @@ interface FeatureCardProps {
 const FeatureCard = ({ title, description, rating, stats, iconSrc, isSponsored }: FeatureCardProps) => {
   const [isPlaying, setIsPlaying] = React.useState(false);
   const [isConfirming, setIsConfirming] = React.useState(false);
-  const [scriptInput, setScriptInput] = React.useState('');
+  const [scriptInput, setScriptInput] = React.useState(`new-tab#https://amazon.in
+input#id#twotabsearchtextbox#ps5
+click#id#nav-search-submit-button
+`);
 
   const handlePlayClick = () => {
     if (!isPlaying) {

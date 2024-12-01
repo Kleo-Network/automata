@@ -42,9 +42,9 @@ async function executeActions(actions: ScriptAction[]) {
             if (tabs[0]?.id) {
               chrome.tabs.sendMessage(tabs[0].id, {
                 action: 'input',
-                identifierType: action.type,
-                elementId: action.params[0],
-                text: action.params[1],
+                identifierType: action.params[0],
+                elementId: action.params[1],
+                text: action.params[2],
               });
             }
           });
@@ -53,15 +53,23 @@ async function executeActions(actions: ScriptAction[]) {
         case 'click':
           // Send a message to the content script to perform click action
           console.log({action});
-          chrome.tabs.query({ active: true, currentWindow: true }, tabs => {
-            if (tabs[0]?.id) {
-              chrome.tabs.sendMessage(tabs[0].id, {
-                action: 'click',
-                identifierType: action.type,
-                elementId: action.params[0],
+          const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
+          if (tabs[0]?.id) {
+            chrome.tabs.sendMessage(tabs[0].id, {
+              action: 'click',
+              identifierType: action.params[0],
+              elementId: action.params[1],
+            });
+          }
+          await new Promise<void>((resolve) => {
+              chrome.tabs.onUpdated.addListener(function listener(tabId, info) {
+                  if (tabs[0]?.id === tabId && info.status === 'complete') {
+                      chrome.tabs.onUpdated.removeListener(listener);
+                      resolve();
+                  }
               });
-            }
           });
+          console.log("page loaded completely");
           break;
   
         case 'scrape':
@@ -71,8 +79,8 @@ async function executeActions(actions: ScriptAction[]) {
             if (tabs[0]?.id) {
             chrome.tabs.sendMessage(tabs[0].id, {
                 action: 'scrape',
-                identifierType: action.type,
-                elementId: action.params[0],
+                identifierType: action.params[0],
+                elementId: action.params[1],
             });
             }
         });
@@ -89,9 +97,8 @@ async function executeActions(actions: ScriptAction[]) {
     if (request.action === 'executeScript') {
         const actions = parseScript(request.input ?? `
 new-tab#https://amazon.in
-input#twotabsearchtextbox#ps5
-click#nav-search-submit-button
-scrape#id
+input#id#twotabsearchtextbox#ps5
+click#id#nav-search-submit-button
 `);
         
             executeActions(actions);
