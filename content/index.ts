@@ -1,3 +1,5 @@
+// content.ts
+
 import { getPageContent } from './utils/getPageContent';
 import {createUserAndStoreCredentials} from './utils/helpers'
 // Define types for custom events
@@ -7,7 +9,7 @@ interface ExtensionIdEventDetail {
 
 // Define types for message events
 interface KleoMessage {
-  type: 'KLEO_UPLOAD_PREVIOUS_HISTORY' | 'KLEO_SIGN_IN' | 'UPDATE_NOTIFICATION_COUNTER';
+  type: '' | '' | '';
   [key: string]: any; // For any additional properties in the message
 }
 
@@ -36,6 +38,54 @@ function injectScript(file: string): void {
   document.head.appendChild(script);
 }
 
+
+// content.ts
+
+chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+  if (request.action === 'input') {
+    performInput(request.identifierType, request.elementId, request.text);
+  } else if (request.action === 'click') {
+    performClick(request.identifierType, request.elementId);
+  }
+});
+
+function performInput(identifierType: string, elementId: string, text: string) {
+  let element: HTMLElement | null = null;
+  if (identifierType === 'id') {
+    element = document.getElementById(elementId);
+  } else if (identifierType === 'class') {
+    element = document.querySelector(`.${elementId}`);
+  } else if (identifierType === 'name') {
+    element = document.querySelector(`[name="${elementId}"]`);
+  }
+
+  if (element && (element instanceof HTMLInputElement || element instanceof HTMLTextAreaElement)) {
+    (element as HTMLInputElement).value = text;
+    console.log(`Set value "${text}" for element:`, element);
+  } else {
+    console.error('Element not found or not an input element');
+  }
+}
+
+function performClick(identifierType: string, elementId: string) {
+  let element: HTMLElement | null = null;
+  if (identifierType === 'id') {
+    element = document.getElementById(elementId);
+  } else if (identifierType === 'class') {
+    element = document.querySelector(`.${elementId}`);
+  } else if (identifierType === 'name') {
+    element = document.querySelector(`[name="${elementId}"]`);
+  }
+
+  if (element) {
+    element.click();
+    console.log('Clicked element:', element);
+  } else {
+    console.error('Element not found for clicking');
+  }
+}
+
+
 window.addEventListener('message', function (event: MessageEvent) {
   // Type guard to check if the event data matches our expected format
   const isKleoMessage = (data: any): data is KleoMessage => {
@@ -45,41 +95,9 @@ window.addEventListener('message', function (event: MessageEvent) {
   if (!isKleoMessage(event.data)) {
     return;
   }
-
+  console.log(event.data)
   switch (event.data.type) {
-    case 'KLEO_UPLOAD_PREVIOUS_HISTORY':
-    case 'UPDATE_NOTIFICATION_COUNTER':
-      chrome.runtime.sendMessage(event.data);
-      break;
-    case 'KLEO_SIGN_IN':
-      chrome.storage.local.get('user', (userData) => {
-        if (userData.user && userData.user.id && userData.user.token) {
-          const response = {
-            type: 'KLEO_SIGN_IN_RESPONSE',
-            address: userData.user.id,
-            token: userData.user.token,
-          };
-          window.postMessage(response, '*');
-        }
-        else if (userData.user && !userData.user.token) {
-          createUserAndStoreCredentials()
-            .then(() => {
-              chrome.storage.local.get('user', (updatedUserData) => {
-                if (updatedUserData.user && updatedUserData.user.token) {
-                  const response = {
-                    type: 'KLEO_SIGN_IN_RESPONSE',
-                    address: updatedUserData.user.id,
-                    token: updatedUserData.user.token,
-                  };
-                  window.postMessage(response, '*');
-                }
-            })})}
-         else {
-          console.error('User data not found or incomplete');
-          window.postMessage({ type: 'KLEO_SIGN_IN_RESPONSE', error: 'User data not found' }, '*');
-        }
-      });
-      break;
+   
   }
 });
 
@@ -88,8 +106,8 @@ chrome.runtime.onMessage.addListener(function (
   sender: chrome.runtime.MessageSender,
   sendResponse: (response?: any) => void,
 ): void {
-  if (request.action === 'getPageContent') {
-    getPageContent((content: string, title: string) => {
+  if (request.action === 'some action') {
+    someAction((content: string, title: string) => {
       sendResponse({ content, title });
     });
   }
