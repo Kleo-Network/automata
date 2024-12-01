@@ -12,6 +12,7 @@ interface FeatureCardProps {
 const FeatureCard = ({ title, description, rating, stats, iconSrc, isSponsored }: FeatureCardProps) => {
   const [isPlaying, setIsPlaying] = React.useState(false);
   const [isConfirming, setIsConfirming] = React.useState(false);
+  const [scriptInput, setScriptInput] = React.useState('');
 
   const handlePlayClick = () => {
     if (!isPlaying) {
@@ -25,7 +26,7 @@ const FeatureCard = ({ title, description, rating, stats, iconSrc, isSponsored }
   const handleConfirm = () => {
     setIsPlaying(true);
     setIsConfirming(false);
-    chrome.runtime.sendMessage({ action: 'executeScript' });
+    chrome.runtime.sendMessage({ action: 'executeScript', input: scriptInput });
   };
 
   return (
@@ -78,6 +79,18 @@ const FeatureCard = ({ title, description, rating, stats, iconSrc, isSponsored }
             </span>
           </div>
         ))}
+      </div>
+
+      <div className="mb-4">
+        <label htmlFor="scriptInput" className="block text-sm font-medium text-gray-700">
+          Script Input
+        </label>
+        <textarea
+          id="scriptInput"
+          value={scriptInput}
+          onChange={(e) => setScriptInput(e.target.value)}
+          className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+        />
       </div>
 
       {/* Play/Purchase Button */}

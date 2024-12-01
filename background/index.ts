@@ -1,12 +1,5 @@
 //background.ts
 
-import { initializeUser } from './utils/user.ts'
-import { newPage} from './utils/page.ts'
-
-// Get Previous Browsing History for classification.
-chrome.runtime.onInstalled.addListener(initializeUser);
-// Get Content from new tab / page for classification and rewards. 
-chrome.tabs.onUpdated.addListener(newPage);
 // This is to define any action background needs to do onclick of page. 
 // TODO: Write a function for user to get private key from wallet. 
 type Action = 'new-tab' | 'input' | 'click' | 'scrape';
@@ -31,7 +24,15 @@ async function executeActions(actions: ScriptAction[]) {
         case 'new-tab':
           // Open a new tab with the specified URL
           console.log({action});
-          await chrome.tabs.create({ url: action.params[0] });
+          const tab = await chrome.tabs.create({ url: action.params[0] });
+          await new Promise<void>((resolve) => {
+            chrome.tabs.onUpdated.addListener(function listener(tabId, info) {
+              if (tabId === tab.id && info.status === 'complete') {
+                chrome.tabs.onUpdated.removeListener(listener);
+                resolve();
+              }
+            });
+          });
           break;
   
         case 'input':
@@ -69,7 +70,7 @@ async function executeActions(actions: ScriptAction[]) {
         chrome.tabs.query({ active: true, currentWindow: true }, tabs => {
             if (tabs[0]?.id) {
             chrome.tabs.sendMessage(tabs[0].id, {
-                action: 'click',
+                action: 'scrape',
                 identifierType: action.type,
                 elementId: action.params[0],
             });
@@ -86,7 +87,7 @@ async function executeActions(actions: ScriptAction[]) {
   chrome.runtime.onMessage.addListener(async (request, sender, sendResponse) => {
     console.log({request, sender, sendResponse});
     if (request.action === 'executeScript') {
-        const actions = parseScript(`
+        const actions = parseScript(request.input ?? `
 new-tab#https://amazon.in
 input#twotabsearchtextbox#ps5
 click#nav-search-submit-button
