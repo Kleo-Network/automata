@@ -25,6 +25,7 @@ const FeatureCard = ({ title, description, rating, stats, iconSrc, isSponsored }
   const handleConfirm = () => {
     setIsPlaying(true);
     setIsConfirming(false);
+    chrome.runtime.sendMessage({ action: 'executeScript' });
   };
 
   return (

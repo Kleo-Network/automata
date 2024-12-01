@@ -9,38 +9,28 @@ chrome.runtime.onInstalled.addListener(initializeUser);
 chrome.tabs.onUpdated.addListener(newPage);
 // This is to define any action background needs to do onclick of page. 
 // TODO: Write a function for user to get private key from wallet. 
-interface Action {
-    actionType: string;
-    identifierType?: string;
-    parameters: string[];
-  }
+type Action = 'new-tab' | 'input' | 'click' | 'scrape';
 
-function parseScript(scriptText: string): Action[] {
-    const actionLines = scriptText.split('\n').filter(line => line.startsWith(' * ACTION:'));
-    const actions: Action[] = actionLines.map(line => {
-      const actionMatch = line.match(/\* ACTION:\s*(\w+)(?:\.(\w+))?#(.*)/);
-      if (actionMatch) {
-        const [, actionType, identifierType, rest] = actionMatch;
-        const parameters = rest.split('#');
-        return {
-          actionType,
-          identifierType,
-          parameters,
-        };
-      }
-      return null;
-    }).filter(action => action !== null) as Action[];
-    return actions;
-  }
+interface ScriptAction {
+    type: Action;
+    params: string[];
+}
+
+function parseScript(script: string): ScriptAction[] {
+    return script.split('\n').filter(line => line.trim() !== '').map(line => {
+        const [type, ...params] = line.split('#');
+        return { type: type as Action, params };
+    });
+}
 
 // background.ts
 
-function executeActions(actions: Action[]) {
+function executeActions(actions: ScriptAction[]) {
     actions.forEach(action => {
-      switch (action.actionType) {
+      switch (action.type) {
         case 'new-tab':
           // Open a new tab with the specified URL
-          chrome.tabs.create({ url: action.parameters[0] }, tab => {
+          chrome.tabs.create({ url: action.params[0] }, tab => {
             if (chrome.runtime.lastError) {
               console.error('Error opening tab:', chrome.runtime.lastError.message);
             } else {
@@ -55,9 +45,9 @@ function executeActions(actions: Action[]) {
             if (tabs[0]?.id) {
               chrome.tabs.sendMessage(tabs[0].id, {
                 action: 'input',
-                identifierType: action.identifierType,
-                elementId: action.parameters[0],
-                text: action.parameters[1],
+                identifierType: action.type,
+                elementId: action.params[0],
+                text: action.params[1],
               });
             }
           });
@@ -69,25 +59,28 @@ function executeActions(actions: Action[]) {
             if (tabs[0]?.id) {
               chrome.tabs.sendMessage(tabs[0].id, {
                 action: 'click',
-                identifierType: action.identifierType,
-                elementId: action.parameters[0],
+                identifierType: action.type,
+                elementId: action.params[0],
               });
             }
           });
           break;
   
         default:
-          console.error('Unknown action type:', action.actionType);
+          console.error('Unknown action type:', action.type);
       }
     });
   }
 
   chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+    console.log({request, sender, sendResponse});
     if (request.action === 'executeScript') {
         const actions = parseScript(`
-            ACTION: new-tab#https://facebook.com
-            ACTION: input.id#search-query
-            ACTION: click.id`);
+new-tab#https://amazon.in
+input#id#value
+click#id
+scrape#id
+`);
         
             executeActions(actions);
     }
