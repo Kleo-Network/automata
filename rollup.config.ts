@@ -157,33 +157,4 @@ const contentScript = {
   ],
 };
 
-// Injected Script
-const injectedScript = {
-  input: 'content/injectedScript.ts',
-  output: {
-    sourcemap: !production,
-    format: 'iife',
-    name: 'injectedScript',
-    file: 'dist/injectedScript.js',
-  },
-  plugins: [
-    ...commonPlugins,
-    typescript({
-      tsconfig: './tsconfig.json',
-      include: ['content/**/*.ts'],
-    }),
-    babel({
-      babelHelpers: 'bundled',
-      extensions: ['.js', '.ts'],
-      exclude: 'node_modules/**',
-      presets: ['@babel/preset-env', '@babel/preset-typescript'],
-    }),
-    production &&
-      visualizer({
-        filename: 'stats-injectedScript.html',
-        template: 'treemap',
-      }),
-  ],
-};
-
-export default [reactApp, background, contentScript, injectedScript];
+export default [reactApp, background, contentScript];
