@@ -1,7 +1,24 @@
 import React from 'react';
 import FeatureCard from './FeatureCard';
+import { Route, Routes, useNavigate } from 'react-router-dom';
+import Settings from './Settings';
+
 
 const HomeComponent = () => {
+  const navigate = useNavigate();
+
+  const handleSettingsClick = () => {
+    navigate('/settings');
+  };
+
+  React.useEffect(() => {
+    navigate('/');
+  }, []);
+
+  const handleHomeClick = () => {
+    navigate('/');
+  };
+
   const featuresData = [
     {
       title: 'Register for PolkaDot Hackathon',
@@ -42,19 +59,23 @@ const HomeComponent = () => {
     <div className="min-h-screen w-full bg-gray-50 flex flex-col justify-between">
       <div className="p-4 sm:p-6 md:p-8 lg:p-10 flex-grow">
         <div className="max-w-7xl mx-auto space-y-6">
-          {featuresData.map((feature, index) => (
-            <FeatureCard
-              key={index}
-              {...feature}
-            />
-          ))}
+
+          <Routes>
+            <Route path="/" element={featuresData.map((feature, index) => (
+              <FeatureCard
+                key={index}
+                {...feature}
+              />
+            ))} />
+            <Route path="/settings" element={<Settings />} />
+          </Routes>
         </div>
       </div>
 
       <nav className="bg-white border-t border-gray-200 fixed bottom-0 left-0 right-0 z-50 shadow-lg">
         <div className="max-w-7xl mx-auto px-4">
           <div className="flex justify-between items-center h-20">
-            <button className="flex flex-col items-center text-blue-600 relative group py-2">
+            <button className="flex flex-col items-center text-blue-600 relative group py-2" onClick={handleHomeClick}>
               <div className="absolute -top-1 left-1/2 w-1 h-1 bg-blue-600 rounded-full transform -translate-x-1/2"></div>
               <svg
                 xmlns="http://www.w3.org/2000/svg"
@@ -91,7 +112,7 @@ const HomeComponent = () => {
               <span className="text-sm font-medium mt-1">Wallet</span>
             </button>
 
-            <button className="flex flex-col items-center text-gray-600 hover:text-blue-600 transition-colors py-2 group">
+            <button className="flex flex-col items-center text-gray-600 hover:text-blue-600 transition-colors py-2 group" onClick={handleSettingsClick}>
               <svg
                 xmlns="http://www.w3.org/2000/svg"
                 className="h-6 w-6 group-hover:scale-110 transition-transform"

@@ -15,7 +15,7 @@ const FeatureCard = ({ title, description, rating, stats, iconSrc, isSponsored }
   const [scriptInput, setScriptInput] = React.useState(`new-tab#https://amazon.in
 input#id#twotabsearchtextbox#ps5
 click#id#nav-search-submit-button
-`);
+infer#class#s-search-results#data-component-type#s-search-result`);
 
   const handlePlayClick = () => {
     if (!isPlaying) {
