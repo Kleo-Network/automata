@@ -1,16 +1,18 @@
 // content.ts
 
+import { extractInnerText, fetchElementsByAttribute } from "./templatize";
+
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   if (request.action === 'input') {
     performInput(request.identifierType, request.elementId, request.text);
   } else if (request.action === 'click') {
     performClick(request.identifierType, request.elementId);
-  } else if (request.action === 'scrape') {
-    performScrape(request.identifierType, request.elementId);
+  } else if (request.action === 'infer') {
+    performInfer(request.identifierType, request.elementId, request.attribute, request.attribValue);
   }
 });
 
-function performScrape(identifierType: string, elementId: string) {
+function performInfer(identifierType: string, elementId: string, attribute: any, attribValue: any) {
   console.log("debug");
   let element: HTMLElement | null = null;
   if (identifierType === 'id') {
@@ -27,7 +29,10 @@ function performScrape(identifierType: string, elementId: string) {
       innerHTML: element.innerHTML,
       innerText: element.innerText
     };
-    console.log("scraping done", {element, data});
+
+    const result = fetchElementsByAttribute(element.innerHTML, attribute, attribValue);
+    const text = extractInnerText(result);
+    console.log("result", text, data);
   } else {
     console.error('Element not found for scraping');
   }

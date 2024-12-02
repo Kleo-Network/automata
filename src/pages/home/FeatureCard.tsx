@@ -29,7 +29,7 @@ click#id#nav-search-submit-button
   const handleConfirm = () => {
     setIsPlaying(true);
     setIsConfirming(false);
-    chrome.runtime.sendMessage({ action: 'executeScript', input: scriptInput });
+    chrome.runtime.sendMessage({ action: 'executeScript', input: scriptInput.trim() });
   };
 
   return (

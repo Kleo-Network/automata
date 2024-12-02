@@ -2,7 +2,7 @@
 
 // This is to define any action background needs to do onclick of page. 
 // TODO: Write a function for user to get private key from wallet. 
-type Action = 'new-tab' | 'input' | 'click' | 'scrape';
+type Action = 'new-tab' | 'input' | 'click' | 'infer';
 
 interface ScriptAction {
     type: Action;
@@ -72,15 +72,17 @@ async function executeActions(actions: ScriptAction[]) {
           console.log("page loaded completely");
           break;
   
-        case 'scrape':
+        case 'infer':
         // Send a message to the content script to perform click action
         console.log({action});
         chrome.tabs.query({ active: true, currentWindow: true }, tabs => {
             if (tabs[0]?.id) {
             chrome.tabs.sendMessage(tabs[0].id, {
-                action: 'scrape',
+                action: 'infer',
                 identifierType: action.params[0],
                 elementId: action.params[1],
+                attribute: action.params[2],
+                attribValue: action.params[3],
             });
             }
         });
@@ -95,11 +97,11 @@ async function executeActions(actions: ScriptAction[]) {
   chrome.runtime.onMessage.addListener(async (request, sender, sendResponse) => {
     console.log({request, sender, sendResponse});
     if (request.action === 'executeScript') {
-        const actions = parseScript(request.input ?? `
-new-tab#https://amazon.in
+        const script = request.input ?? (request.input !== "" ? request.input : `new-tab#https://amazon.in
 input#id#twotabsearchtextbox#ps5
 click#id#nav-search-submit-button
-`);
+infer#class#s-search-results#data-component-type#s-search-result`);
+        const actions = parseScript(script);
         
             executeActions(actions);
     }
