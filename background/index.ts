@@ -113,7 +113,6 @@ async function executeActions(actions: ScriptAction[]) {
 
         case 'wait':
             if (tabInstance.id) {
-              await waitFor(4);
               await waitForPageLoad(tabInstance.id);
             }
           break;

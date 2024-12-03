@@ -33,7 +33,8 @@ async function performInfer(identifierType: string, elementId: string, attribute
   if (identifierType === 'id') {
     element = document.getElementById(elementId);
   } else if (identifierType === 'class') {
-    element = document.querySelector(`.${elementId}`);
+    console.log("element id", elementId);
+    element = document.getElementsByClassName(`${elementId}`)[0];
   } else if (identifierType === 'name') {
     element = document.querySelector(`[name="${elementId}"]`);
   }
