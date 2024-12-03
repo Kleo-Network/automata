@@ -12,6 +12,12 @@ type ScriptProject = {
     image: string;
 }
 
+function waitFor(seconds: number) {
+  return new Promise<void>((resolve) => {
+      setTimeout(() => resolve(), seconds * 1000); // Convert seconds to milliseconds
+  });
+}
+
 async function fetchScript(cidr: string) {
   try {
     
@@ -107,6 +113,7 @@ async function executeActions(actions: ScriptAction[]) {
 
         case 'wait':
             if (tabInstance.id) {
+              await waitFor(4);
               await waitForPageLoad(tabInstance.id);
             }
           break;
