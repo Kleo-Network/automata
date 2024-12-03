@@ -23,6 +23,7 @@ type FeatureCardProps = {
 
 const HomeComponent = () => {
   const [featuresData, setFeaturesData] = React.useState<FeatureCardProps[]>([]);
+  let val: FeatureCardProps[] = [];
 
   async function fetchScript(ipfs_hash: string) {
     try {
@@ -42,21 +43,26 @@ const HomeComponent = () => {
         rating: 3.4
 
       };
-      setFeaturesData([...featuresData, card]);
+      // setFeaturesData([...featuresData, card]);
+      return card;
     } catch (error) {
       throw new Error(String(error));
     }
   }
 
+  const ffff = async () => {
+    val = [];
+    for (const proj of scriptProjects) {
+      console.log("proj", proj);
+      val.push(await fetchScript(proj));
+    };
+    setFeaturesData(val);
+  }
 
-  const scriptProjects = ["bafkreie4gnrwnb46h2sryinuw4siu2gzzcsarujvq2uxtigou45uduw3jq"];
+  const scriptProjects = ["bafkreie4gnrwnb46h2sryinuw4siu2gzzcsarujvq2uxtigou45uduw3jq", "bafkreibwdux45n6cpmgd3dmgwop2ajoxvagzej7gb3gux6k6w3zrletfyq"];
 
   React.useEffect(() => {
-    scriptProjects.map(proj => {
-      console.log("proj", proj);
-      fetchScript(proj);
-    });
-
+    ffff();
   }, []);
 
   const navigate = useNavigate();
