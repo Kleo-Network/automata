@@ -1,10 +1,64 @@
 import React from 'react';
 import FeatureCard from './FeatureCard';
+import FeatureCardProps from './FeatureCard';
 import { Route, Routes, useNavigate } from 'react-router-dom';
 import Settings from './Settings';
 
 
+type Stats = {
+  label: string;
+  value: string;
+  type?: string;
+}
+
+type FeatureCardProps = {
+  title: string;
+  description: string;
+  rating: number;
+  stats: Stats[];
+  iconSrc: string;
+  isSponsored: boolean;
+  script: string;
+}
+
 const HomeComponent = () => {
+  const [featuresData, setFeaturesData] = React.useState<FeatureCardProps[]>([]);
+
+  async function fetchScript(ipfs_hash: string) {
+    try {
+      const url = `https://orange-quiet-toad-977.mypinata.cloud/ipfs/${ipfs_hash}`;
+      const response = await fetch(url);
+      const proj = await response.json();
+      const card: FeatureCardProps = {
+        title: proj.projectName,
+        description: proj.shortDescription,
+        script: proj.projectScript,
+        iconSrc: proj.image,
+        stats: [
+          { label: 'Used By', value: '10.2k' },
+          { label: 'Earn', value: '+5.5k', type: 'sponsored' },
+        ],
+        isSponsored: false,
+        rating: 3.4
+
+      };
+      setFeaturesData([...featuresData, card]);
+    } catch (error) {
+      throw new Error(String(error));
+    }
+  }
+
+
+  const scriptProjects = ["bafkreie4gnrwnb46h2sryinuw4siu2gzzcsarujvq2uxtigou45uduw3jq"];
+
+  React.useEffect(() => {
+    scriptProjects.map(proj => {
+      console.log("proj", proj);
+      fetchScript(proj);
+    });
+
+  }, []);
+
   const navigate = useNavigate();
 
   const handleSettingsClick = () => {
@@ -19,41 +73,8 @@ const HomeComponent = () => {
     navigate('/');
   };
 
-  const featuresData = [
-    {
-      title: 'Register for PolkaDot Hackathon',
-      description: 'This will be only for developers, users can resigters',
-      rating: 4.9,
-      stats: [
-        { label: 'Used By', value: '10.2k' },
-        { label: 'Earn', value: '+5.5k', type: 'sponsored' },
-      ],
-      iconSrc: 'https://polkadot.com/favicon/android-chrome-512x512.png',
-      isSponsored: true,
-    },
-    {
-      title: 'GST Registration - India',
-      description: 'Register for GST for your business compliance',
-      rating: 4.7,
-      stats: [
-        { label: 'Users', value: '50k' },
-        { label: 'Cost', value: '-2k' },
-      ],
-      iconSrc: 'https://img.favpng.com/3/14/16/flag-of-india-stock-photography-png-favpng-e0xS2FM1T1GksdtfQ5r3Br2Zp.jpg',
-      isSponsored: false,
-    },
-    {
-      title: 'Create a spreadsheet for your weekly expenses',
-      description: 'Create a spreadsheet to track your expense, the flow happens infront of your eyes.',
-      rating: 4.8,
-      stats: [
-        { label: 'Users', value: '850' },
-        { label: 'Cost', value: '-1.1k' },
-      ],
-      iconSrc: 'https://img.freepik.com/premium-vector/google-sheets-logo_578229-309.jpg',
-      isSponsored: false,
-    },
-  ];
+
+
 
   return (
     <div className="min-h-screen w-full bg-gray-50 flex flex-col justify-between">

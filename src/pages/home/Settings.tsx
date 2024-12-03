@@ -3,13 +3,19 @@ import React, { useState } from 'react';
 const Settings: React.FC = () => {
     const [url, setUrl] = useState<string | undefined>(undefined);
     const [apiKey, setApiKey] = useState<string | undefined>(undefined);
+    const [jwt, setJwt] = useState<string | undefined>(undefined);
+    const [gateway, setGateway] = useState<string | undefined>(undefined);
 
     React.useEffect(() => {
-        chrome.storage.local.get(['url', 'apiKey'], (result) => {
+        chrome.storage.local.get(['url', 'apiKey', 'jwt', 'gateway'], (result) => {
             const storedUrl = result.url || '';
             const storedApiKey = result.apiKey || '';
+            const storedJwt = result.jwt || '';
+            const storedGateway = result.gateway || '';
             setUrl(storedUrl);
             setApiKey(storedApiKey);
+            setJwt(storedJwt);
+            setGateway(storedGateway);
         });
         // const storedUrl = localStorage.getItem('url') || '';
         // const storedApiKey = localStorage.getItem('apiKey') || '';
@@ -25,10 +31,18 @@ const Settings: React.FC = () => {
         setApiKey(e.target.value);
     };
 
+    const handleJwtChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        setJwt(e.target.value);
+    };
+
+    const handleGatewayChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        setGateway(e.target.value);
+    };
+
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
         // Store the url and api key in local storage
-        chrome.storage.local.set({ url, apiKey }, () => {
+        chrome.storage.local.set({ url, apiKey, jwt, gateway }, () => {
             console.log('Settings saved');
         });
         // localStorage.setItem('url', url ?? '');
@@ -61,6 +75,30 @@ const Settings: React.FC = () => {
                         placeholder='sk-XXXXXXXX'
                         className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
                         disabled={apiKey === undefined}
+                    />
+                </div>
+                <div>
+                    <label htmlFor="apiKey" className="block text-sm font-medium text-gray-700">Pinata Gateway:</label>
+                    <input
+                        type="text"
+                        id="gateway"
+                        value={gateway}
+                        onChange={handleGatewayChange}
+                        placeholder="https://api.openai.com"
+                        className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                        disabled={gateway === undefined}
+                    />
+                </div>
+                <div>
+                    <label htmlFor="url" className="block text-sm font-medium text-gray-700">JWT:</label>
+                    <input
+                        type="text"
+                        id="jwt"
+                        value={jwt}
+                        onChange={handleJwtChange}
+                        placeholder='sk-XXXXXXXX'
+                        className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                        disabled={jwt === undefined}
                     />
                 </div>
                 <button

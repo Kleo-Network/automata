@@ -3,6 +3,31 @@
 // This is to define any action background needs to do onclick of page. 
 // TODO: Write a function for user to get private key from wallet. 
 type Action = 'new-tab' | 'input' | 'click' | 'infer' | 'wait';
+import { PinataSDK } from "pinata-web3";
+
+type ScriptProject = {
+    projectScript: string;
+    projectName: string;
+    projectDescription: string;
+    image: string;
+}
+
+async function fetchScript(cidr: string) {
+  try {
+    
+    const result = await chrome.storage.local.get(['jwt', 'gateway']);
+    const pinata = new PinataSDK({ pinataJwt: result.jwt, pinataGateway: result.gateway });
+    const data = await pinata.gateways.get(cidr);
+
+    const content = (data.data) as unknown as ScriptProject;
+
+    return content;
+  } catch (error) {
+    throw new Error(error);
+  }
+}
+
+const scriptProjects = ["bafkreie4gnrwnb46h2sryinuw4siu2gzzcsarujvq2uxtigou45uduw3jq"];
 
 interface ScriptAction {
     type: Action;
@@ -61,6 +86,7 @@ async function executeActions(actions: ScriptAction[]) {
               action: 'click',
               identifierType: action.params[0],
               elementId: action.params[1],
+              idName: action.params[2],
             });
           }
           break;
@@ -102,10 +128,13 @@ async function executeActions(actions: ScriptAction[]) {
   chrome.runtime.onMessage.addListener(async (request, sender, sendResponse) => {
     console.log({request, sender, sendResponse});
     if (request.action === 'executeScript') {
-        const script = request.input ?? (request.input);
-        const actions = parseScript(script);
-
-        executeActions(actions);
+        const content = request.input;
+        // const content = await fetchScript(request.input);
+        if (content) {
+          console.log({script: content});
+          const actions = parseScript(content);
+          executeActions(actions);
+        }
     }
   });
 

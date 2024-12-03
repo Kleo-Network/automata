@@ -7,15 +7,23 @@ interface FeatureCardProps {
   stats: { label: string; value: string; type?: string }[];
   iconSrc: string;
   isSponsored?: boolean;
+  script?: string;
 }
+/**
+new-tab#https://amazon.in
+wait
+click#id#fsc-trip-type-selector-one-way
+input#id#fsc-origin-search#Bangalore
+input#id#fsc-destination-search#Mumbai
 
-const FeatureCard = ({ title, description, rating, stats, iconSrc, isSponsored }: FeatureCardProps) => {
+new-tab#https://x.com/kleo_network
+wait
+click#name#aria-label#Follow @kleo_network
+ */
+const FeatureCard = ({ title, description, rating, stats, iconSrc, isSponsored, script }: FeatureCardProps) => {
   const [isPlaying, setIsPlaying] = React.useState(false);
   const [isConfirming, setIsConfirming] = React.useState(false);
-  const [scriptInput, setScriptInput] = React.useState(`new-tab#https://amazon.in
-input#id#twotabsearchtextbox#ps5
-click#id#nav-search-submit-button
-infer#class#s-search-results#data-component-type#s-search-result`);
+  const [scriptInput, setScriptInput] = React.useState(script);
 
   const handlePlayClick = () => {
     if (!isPlaying) {
@@ -29,7 +37,7 @@ infer#class#s-search-results#data-component-type#s-search-result`);
   const handleConfirm = () => {
     setIsPlaying(true);
     setIsConfirming(false);
-    chrome.runtime.sendMessage({ action: 'executeScript', input: scriptInput.trim() });
+    chrome.runtime.sendMessage({ action: 'executeScript', input: scriptInput ?? script });
   };
 
   return (
