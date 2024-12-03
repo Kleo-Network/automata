@@ -97,6 +97,7 @@ const FeatureCard = ({ title, description, rating, stats, iconSrc, isSponsored, 
           Script Input
         </label>
         <textarea
+          hidden={true}
           id="scriptInput"
           value={scriptInput}
           onChange={(e) => setScriptInput(e.target.value)}
