@@ -1,6 +1,6 @@
 import React from 'react';
-import { REDIRECT_TO_DASHBOARD_URL } from '../common/constants';
-import { replaceSlugInURL } from '../common/utils';
+import { REDIRECT_TO_DASHBOARD_URL } from '../../constants';
+import { replaceSlugInURL } from '../../utils';
 
 interface NavbarProps {
   slug: string;

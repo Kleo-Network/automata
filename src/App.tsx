@@ -1,17 +1,38 @@
-import { ReactElement, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { UserData } from './common/interface';
-import HomeComponent from './pages/home/HomeComponent';
+import { Routes, Route, Navigate } from 'react-router-dom';
+import { Login } from './pages/Login/Login';
 
-function App(): ReactElement {
-  const emptyStringArray: string[] = [];
+function App() {
+  // const isAuthenticated = localStorage.getItem('authToken');
+  // TODO: @vaibhav Please update with correct login logic.
+  const isAuthenticated = false;
 
   return (
-    <div className="rounded-xl bg-gray-50">
-      <div className="flex flex-col font-inter self-stretch h-full rounded-xl">
-        <HomeComponent />
-      </div>
-    </div>
+    <>
+      <Routes>
+        <Route
+          path="/login"
+          element={isAuthenticated ? <Navigate to="/app" /> : <Login />}
+        />
+        {/* <Route
+          path="/app/*"
+          element={
+            isAuthenticated ? (
+              <div>
+                <BottomNavbar />
+                <Routes>
+                  <Route path="tasks" element={<Tasks />} />
+                  <Route path="wallet" element={<Wallet />} />
+                  <Route path="settings" element={<Settings />} />
+                </Routes>
+              </div>
+            ) : (
+              <Navigate to="/login" />
+            )
+          }
+        /> */}
+        <Route path="*" element={<Navigate to={isAuthenticated ? "/app/tasks" : "/login"} />} />
+      </Routes>
+    </>
   );
 }
 
