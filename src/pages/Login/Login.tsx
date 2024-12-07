@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { FormInputField } from "./FormInput";
 import { FormButton } from "./FormButton";
-import { useNavigate } from "react-router-dom";
 
 const IMAGES = {
   KleoLogoInCirclePath: "../../assets/images/login/kleoLogoInCircle.svg",
@@ -43,16 +42,12 @@ const LOGIN_PAGE_DATA = {
 export const Login = () => {
   const [name, setName] = useState("");
   const [privateKey, setPrivateKey] = useState("");
-  const navigate = useNavigate();
 
-  // TODO: @vaibhav Update the logic for handling the submissions. Right now redirecting to home page.
   const handleCreateNewAccount = () => {
     console.log("Created new account of: ", name);
-    navigate('/app/tasks');
   };
   const handleImportYourAccount = () => {
     console.log("Imported account of: ", privateKey);
-    navigate('/app/tasks');
   };
 
   return (
