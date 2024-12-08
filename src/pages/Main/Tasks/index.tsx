@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { TaskCard } from "./TaskCard";
 
 const IMAGES = {
   searchIconPath: '../../../assets/images/Tasks/searchIcon.svg'
@@ -7,6 +8,73 @@ const IMAGES = {
 const TASKS_PAGE_DATA = {
   title: "Your Personal AI Assistant",
   desc: "Select your task and sit back as your personal AI assistant takes over.",
+  taskCards: [
+    {
+      description: "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.",
+      title: "Amazon Order List",
+      iconSrc: 'https://icon.horse/icon/amazon.in',
+      script: "",
+      stats: [
+        { label: 'Used', value: '10.2k times', iconSrc: "../../assets/images/tasks/profileIcon.svg" },
+        { label: 'Sponsored', value: 'Amazon', iconSrc: 'https://icon.horse/icon/amazon.in' },
+        { label: 'Earn', value: '+5.5k', iconSrc: '../../assets/images/tasks/dollarIcon.svg' },
+      ],
+      rating: 3.4,
+      creator: 'cyborg_129'
+    },
+    {
+      description: "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.",
+      title: "Amazon Order List",
+      iconSrc: 'https://icon.horse/icon/amazon.in',
+      script: "",
+      stats: [
+        { label: 'Used', value: '10.2k times', iconSrc: "../../assets/images/tasks/profileIcon.svg" },
+        { label: 'Sponsored', value: 'Amazon', iconSrc: 'https://icon.horse/icon/amazon.in' },
+        { label: 'Earn', value: '+5.5k', iconSrc: '../../assets/images/tasks/dollarIcon.svg' },
+      ],
+      rating: 3.4,
+      creator: 'cyborg_129'
+    },
+    {
+      description: "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.",
+      title: "Amazon Order List",
+      iconSrc: 'https://icon.horse/icon/amazon.in',
+      script: "",
+      stats: [
+        { label: 'Used', value: '10.2k times', iconSrc: "../../assets/images/tasks/profileIcon.svg" },
+        { label: 'Sponsored', value: 'Amazon', iconSrc: 'https://icon.horse/icon/amazon.in' },
+        { label: 'Earn', value: '+5.5k', iconSrc: '../../assets/images/tasks/dollarIcon.svg' },
+      ],
+      rating: 3.4,
+      creator: 'cyborg_129'
+    },
+    {
+      description: "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.",
+      title: "Amazon Order List",
+      iconSrc: 'https://icon.horse/icon/amazon.in',
+      script: "",
+      stats: [
+        { label: 'Used', value: '10.2k times', iconSrc: "../../assets/images/tasks/profileIcon.svg" },
+        { label: 'Sponsored', value: 'Amazon', iconSrc: 'https://icon.horse/icon/amazon.in' },
+        { label: 'Earn', value: '+5.5k', iconSrc: '../../assets/images/tasks/dollarIcon.svg' },
+      ],
+      rating: 3.4,
+      creator: 'cyborg_129'
+    },
+    {
+      description: "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.",
+      title: "Amazon Order List",
+      iconSrc: 'https://icon.horse/icon/amazon.in',
+      script: "",
+      stats: [
+        { label: 'Used', value: '10.2k times', iconSrc: "../../assets/images/tasks/profileIcon.svg" },
+        { label: 'Sponsored', value: 'Amazon', iconSrc: 'https://icon.horse/icon/amazon.in' },
+        { label: 'Earn', value: '+5.5k', iconSrc: '../../assets/images/tasks/dollarIcon.svg' },
+      ],
+      rating: 3.4,
+      creator: 'cyborg_129'
+    },
+  ]
 };
 
 export const Tasks = () => {
@@ -43,6 +111,23 @@ export const Tasks = () => {
           onKeyDown={handleKeyDown}
           className="w-full bg-transparent text-base outline-none placeholder:text-gray-500"
         />
+      </div>
+      {/* Tasks List */}
+      <div className="overflow-auto w-full flex-1">
+        {
+          TASKS_PAGE_DATA.taskCards.map((taskCard, index) => {
+            return <TaskCard
+              creator={taskCard.creator}
+              description={taskCard.description}
+              iconSrc={taskCard.iconSrc}
+              rating={taskCard.rating}
+              script={taskCard.script}
+              stats={taskCard.stats}
+              title={taskCard.title}
+              key={index}
+            />
+          })
+        }
       </div>
     </div>
   )

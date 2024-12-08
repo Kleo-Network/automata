@@ -8,7 +8,7 @@ export const Main = () => {
       <Header />
       <Routes>
         <Route path="tasks" element={<Tasks />} />
-        <Route path="wallet" element={<><h1 className="text-6xl">Wallet</h1></>} />
+        <Route path="wallet" element={<><h1 className="text-5xl">Wallet</h1></>} />
         <Route path="settings" element={<><h1 className="text-6xl">Settings</h1></>} />
       </Routes>
     </>
