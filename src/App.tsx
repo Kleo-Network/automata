@@ -1,10 +1,11 @@
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { Login } from './pages/Login/Login';
+import { Main } from './pages/Main';
 
 function App() {
   // const isAuthenticated = localStorage.getItem('authToken');
   // TODO: @vaibhav Please update with correct login logic.
-  const isAuthenticated = false;
+  const isAuthenticated = true;
 
   return (
     <>
@@ -13,23 +14,12 @@ function App() {
           path="/login"
           element={isAuthenticated ? <Navigate to="/app" /> : <Login />}
         />
-        {/* <Route
+        <Route
           path="/app/*"
           element={
-            isAuthenticated ? (
-              <div>
-                <BottomNavbar />
-                <Routes>
-                  <Route path="tasks" element={<Tasks />} />
-                  <Route path="wallet" element={<Wallet />} />
-                  <Route path="settings" element={<Settings />} />
-                </Routes>
-              </div>
-            ) : (
-              <Navigate to="/login" />
-            )
+            isAuthenticated ? <Main /> : <Navigate to="/login" />
           }
-        /> */}
+        />
         <Route path="*" element={<Navigate to={isAuthenticated ? "/app/tasks" : "/login"} />} />
       </Routes>
     </>
