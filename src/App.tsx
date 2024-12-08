@@ -11,14 +11,14 @@ function App() {
     <>
       <Routes>
         <Route
-          path="/login"
-          element={isAuthenticated ? <Navigate to="/app" /> : <Login />}
-        />
-        <Route
           path="/app/*"
           element={
             isAuthenticated ? <Main /> : <Navigate to="/login" />
           }
+        />
+        <Route
+          path="/login"
+          element={isAuthenticated ? <Navigate to="/app" /> : <Login />}
         />
         <Route path="*" element={<Navigate to={isAuthenticated ? "/app/tasks" : "/login"} />} />
       </Routes>
