@@ -83,7 +83,7 @@ function getHtmlPlugins(chunks) {
     return chunks.map(
         (chunk) =>
             new HTMLPlugin({
-                title: "Automata",
+                title: "Kleo Network",
                 filename: `${chunk}.html`,
                 chunks: [chunk],
             })

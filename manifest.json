@@ -30,7 +30,7 @@
     ],
     "web_accessible_resources": [
       {
-        "resources": ["injectedScript.js"],
+        "resources": ["contentScript.js"],
         "matches": ["http://localhost:5173/*","https://*.kleo.network/*"]
       }
     ]

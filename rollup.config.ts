@@ -9,8 +9,10 @@ import { terser } from 'rollup-plugin-terser';
 import json from '@rollup/plugin-json';
 import nodePolyfills from 'rollup-plugin-node-polyfills';
 import { visualizer } from 'rollup-plugin-visualizer';
+import path from 'path';
 import pkg from './package.json';
 import tailwindcss from 'tailwindcss';
+import url from 'rollup-plugin-url';
 import svgr from '@svgr/rollup';
 import autoprefixer from 'autoprefixer';
 import postcssImport from 'postcss-import';
@@ -61,7 +63,7 @@ const reactApp = {
     }),
     production &&
       visualizer({
-        filename: 'stats-app.html',
+        filename: 'app.html',
         template: 'treemap', // or 'sunburst' for different visualization
       }),
       postcss({
@@ -115,7 +117,7 @@ const background = {
     }),
     production &&
       visualizer({
-        filename: 'stats-background.html',
+        filename: 'background.html',
         template: 'treemap',
       }),
   ],
@@ -149,10 +151,40 @@ const contentScript = {
     }),
     production &&
       visualizer({
-        filename: 'stats-contentScript.html',
+        filename: 'contentScript.html',
         template: 'treemap',
       }),
   ],
 };
 
+// Injected Script
+// const injectedScript = {
+//   input: 'content/injectedScript.ts',
+//   output: {
+//     sourcemap: !production,
+//     format: 'iife',
+//     name: 'injectedScript',
+//     file: 'dist/injectedScript.js',
+//   },
+//   plugins: [
+//     ...commonPlugins,
+//     typescript({
+//       tsconfig: './tsconfig.json',
+//       include: ['content/**/*.ts'],
+//     }),
+//     babel({
+//       babelHelpers: 'bundled',
+//       extensions: ['.js', '.ts'],
+//       exclude: 'node_modules/**',
+//       presets: ['@babel/preset-env', '@babel/preset-typescript'],
+//     }),
+//     production &&
+//       visualizer({
+//         filename: 'stats-injectedScript.html',
+//         template: 'treemap',
+//       }),
+//   ],
+// };
+
+//export default [reactApp, background, contentScript, injectedScript];
 export default [reactApp, background, contentScript];

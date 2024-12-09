@@ -3,7 +3,6 @@
 // This is to define any action background needs to do onclick of page. 
 // TODO: Write a function for user to get private key from wallet. 
 type Action = 'new-tab' | 'input' | 'click' | 'infer' | 'wait';
-import { PinataSDK } from "pinata-web3";
 
 type ScriptProject = {
     projectScript: string;
@@ -22,12 +21,10 @@ async function fetchScript(cidr: string) {
   try {
     
     const result = await chrome.storage.local.get(['jwt', 'gateway']);
-    const pinata = new PinataSDK({ pinataJwt: result.jwt, pinataGateway: result.gateway });
-    const data = await pinata.gateways.get(cidr);
+    
 
-    const content = (data.data) as unknown as ScriptProject;
 
-    return content;
+    return "content";
   } catch (error) {
     throw new Error(error);
   }
