@@ -8,24 +8,32 @@ module.exports = {
         3: '3',
       },
       colors: {
-        'gray-navbar': '#f8f9fc',
-        'gray-blue': {
-          25: '#FCFCFD',
-          100: '#EAECF5',
-          800: '#293056',
+        overlay: 'rgba(52, 64, 84, 0.7)',
+        grayblue: {
+          25: '#FCFCFD', // AA 6.07
+          50: '#F8F9FC', // AA 5.91
+          100: '#EAECF5', // AA 5.29
+          200: '#D5D9EB', // AA 4.43
+          300: '#B3B8DB', // AA 1.94
+          400: '#717BBC', // AA 4.01
+          500: '#4E5BA6', // AA 6.24
+          600: '#3E4784', // AA 8.59
+          700: '#363F72', // AAA 9.99
+          800: '#293056', // AAA 12.72
+          900: '#101323', // AAA 18.43
         },
-        'gray-lightest': '#f9fafb',
-        'gray-subheader': '#98A2B3',
-        'gray-background': '#F2F4F7',
-        secondary: '#333F53',
-        'yt-card': '#293056',
-        'primary-btn': {
-          100: '#D8B4FE',
-          200: '#C084F5',
-          300: '#A855F7',
-          400: '#9333EA',
-          500: '#7F56D9', // Base Color
-          600: '#6B21A8',
+        primary: {
+          25: '#FCFAFF',
+          50: '#F9F5FF',
+          100: '#F4EBFF',
+          200: '#E9D7FE',
+          300: '#D6BBFB',
+          400: '#B692F6',
+          500: '#9E77ED',
+          600: '#7F56D9',
+          700: '#7F56D9',
+          800: '#53389E',
+          900: '#42307D',
         },
       },
       fontFamily: {
