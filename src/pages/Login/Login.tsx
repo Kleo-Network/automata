@@ -1,9 +1,10 @@
 // src/pages/Login/Login.tsx
 
-import { useState } from "react";
+import { useState, useContext } from "react";
 import { FormInputField } from "./FormInput";
 import { FormButton } from "./FormButton";
 import { useNavigate } from "react-router-dom";
+import { UserContext } from '../../common/hooks/UserContext';
 
 import { createNewUser, restoreAccount } from '../../../content/index'
 const IMAGES = {
@@ -44,6 +45,8 @@ const LOGIN_PAGE_DATA = {
 }
 
 export const Login = () => {
+  const { setAddress, setEncryptedPrivateKey } = useContext(UserContext);
+
   const [name, setName] = useState("");
   const [privateKey, setPrivateKey] = useState("");
   const navigate = useNavigate();

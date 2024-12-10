@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { Login } from './pages/Login/Login';
 import { Main } from './pages/Main';
+import { UserProvider } from './common/hooks/UserContext';
 
 function App() {
   // const isAuthenticated = localStorage.getItem('authToken');
@@ -11,21 +12,22 @@ function App() {
   const [address, setAddress] = useState("");
 
   return (
-    <>
+    <UserProvider>
+
       <Routes>
         <Route
           path="/app/*"
           element={
-            address ? <Main /> : <Navigate to="/login" />
+            address ? <Main address={address} encryptedPrivateKey={encryptedPrivateKey} /> : <Navigate to="/login" />
           }
         />
         <Route
           path="/login"
-          element={address ? <Navigate to="/app" /> : <Login />}
+          element={address ? <Navigate to="/app" /> : <Login encryptedPrivateKey={encryptedPrivateKey} setEncryptedPrivateKey={setEncryptedPrivateKey} address={address} setAddress={setAddress} />}
         />
         <Route path="*" element={<Navigate to={address ? "/app/tasks" : "/login"} />} />
       </Routes>
-    </>
+    </UserProvider>
   );
 }
 
