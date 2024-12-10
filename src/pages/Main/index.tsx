@@ -2,6 +2,7 @@ import { Route, Routes } from "react-router-dom"
 import { Header } from "../../common/components/Header"
 import { Tasks } from "./Tasks"
 import { Wallet } from "./Wallet"
+import { Settings } from "./Settings"
 
 export const Main = () => {
   return (
@@ -10,7 +11,7 @@ export const Main = () => {
       <Routes>
         <Route path="tasks" element={<Tasks />} />
         <Route path="wallet" element={<Wallet />} />
-        <Route path="settings" element={<><h1 className="text-6xl">Settings</h1></>} />
+        <Route path="settings" element={<Settings />} />
       </Routes>
     </>
   )
