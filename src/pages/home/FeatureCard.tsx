@@ -35,8 +35,7 @@ const FeatureCard = ({ title, description, rating, stats, iconSrc, isSponsored, 
   };
 
   const handleConfirm = () => {
-    setIsPlaying(true);
-    setIsConfirming(false);
+    alert('Script execution started!');
     chrome.runtime.sendMessage({ action: 'executeScript', input: scriptInput ?? script });
   };
 
@@ -113,7 +112,7 @@ const FeatureCard = ({ title, description, rating, stats, iconSrc, isSponsored, 
         </div>
       ) : (
         <button
-          onClick={handlePlayClick}
+          onClick={handleConfirm}
           className={`w-full py-2.5 px-4 rounded-lg flex items-center justify-center space-x-2 transition-all duration-300 ${isPlaying
             ? 'bg-red-600 hover:bg-red-700 text-white'
             : 'bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white'

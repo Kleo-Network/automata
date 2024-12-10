@@ -1,8 +1,10 @@
 //background.ts
-
+import LLM from './utils/llm';
 // This is to define any action background needs to do onclick of page. 
 // TODO: Write a function for user to get private key from wallet. 
 type Action = 'new-tab' | 'input' | 'click' | 'infer' | 'wait';
+
+
 
 type ScriptProject = {
     projectScript: string;
@@ -11,26 +13,23 @@ type ScriptProject = {
     image: string;
 }
 
-function waitFor(seconds: number) {
-  return new Promise<void>((resolve) => {
-      setTimeout(() => resolve(), seconds * 1000); // Convert seconds to milliseconds
-  });
+const llm = new LLM();
+
+async function initializeLLM() {
+  await llm.initialize();
 }
+
 
 async function fetchScript(cidr: string) {
   try {
     
     const result = await chrome.storage.local.get(['jwt', 'gateway']);
     
-
-
     return "content";
   } catch (error) {
     throw new Error(error);
   }
 }
-
-const scriptProjects = ["bafkreie4gnrwnb46h2sryinuw4siu2gzzcsarujvq2uxtigou45uduw3jq"];
 
 interface ScriptAction {
     type: Action;
@@ -120,24 +119,27 @@ async function executeActions(actions: ScriptAction[]) {
     };
   }
 
-// new-tab#https://amazon.in
-// wait
-// input#id#twotabsearchtextbox#ps5
-// click#id#nav-search-submit-button
-// wait
-// infer#class#s-search-results#data-component-type#s-search-result
-// wait
-
   chrome.runtime.onMessage.addListener(async (request, sender, sendResponse) => {
     console.log({request, sender, sendResponse});
     if (request.action === 'executeScript') {
+      
         const content = request.input;
         // const content = await fetchScript(request.input);
         if (content) {
-          console.log({script: content});
+          console.log("content", {script: content});
           const actions = parseScript(content);
           executeActions(actions);
         }
+    }
+    else if (request.action === 'inferLLM'){
+      try {
+        const { text, prompt } = request;
+        const result = await llm.sendRequest(text, prompt);
+        sendResponse({ index: result });
+      } catch (error: any) {
+        sendResponse({ error: error.message });
+      }
+      return true;
     }
   });
 
@@ -145,3 +147,14 @@ async function executeActions(actions: ScriptAction[]) {
 chrome.sidePanel
           .setPanelBehavior({ openPanelOnActionClick: true })
           .catch((error) => console.error(error));
+
+initializeLLM().then(() => console.log("LLM initialized")).catch(console.error);
+
+// Test Script
+// new-tab#https://amazon.in
+// wait
+// input#id#twotabsearchtextbox#ps5
+// click#id#nav-search-submit-button
+// wait
+// infer#class#s-search-results#data-component-type#s-search-result
+// wait

@@ -5,7 +5,9 @@ import { Main } from './pages/Main';
 function App() {
   // const isAuthenticated = localStorage.getItem('authToken');
   // TODO: @vaibhav Please update with correct login logic.
-  const isAuthenticated = true;
+  //
+
+  const isAuthenticated = false;
 
   return (
     <>

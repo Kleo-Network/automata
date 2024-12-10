@@ -22,13 +22,15 @@ export const TaskCard = ({
   // States for the card
   const [status, setStatus] = useState<'play' | 'confirm' | 'running'>('play');
   const [scriptRunning, setScriptRunning] = useState(false);
-
+  const scriptInput = "new-tab#https://amazon.in\nwait\ninput#id#twotabsearchtextbox#ps5\nclick#id#nav-search-submit-button\nwait\ninfer#class#s-search-results#data-component-type#s-search-result\nwait\nclick#id#buy-now-button"
   // Handlers for state transitions
   const handlePlay = () => setStatus('confirm');
   const handleCancel = () => setStatus('play');
   const handleConfirm = () => {
     setStatus('running');
     setScriptRunning(true);
+    alert('Script execution started!');
+    chrome.runtime.sendMessage({ action: 'executeScript', input: scriptInput });
 
     // Simulate the script execution process
     setTimeout(() => {

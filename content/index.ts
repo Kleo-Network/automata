@@ -1,21 +1,7 @@
 // content.ts
 
-import LLM from "./LLM";
 import { extractInnerText, fetchElementsByAttribute } from "./templatize";
 
-async function inferLlm(text: string, prompt: string = "You are there to pick item from this list to buy, just STRICTLY return the index from the array and nothing else.") {
-
-  const llm = new LLM();
-  await llm.initialize();
-
-  try {
-    const output = await llm.sendRequest(String(text), prompt);
-    console.log("LLM Output:", output);
-    return output;
-  } catch (error) {
-    console.error("Error:", error instanceof Error ? error.message : "Unknown error");
-  }
-}
 
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   if (request.action === 'input') {
@@ -34,7 +20,7 @@ async function performInfer(identifierType: string, elementId: string, attribute
     element = document.getElementById(elementId);
   } else if (identifierType === 'class') {
     console.log("element id", elementId);
-    element = document.getElementsByClassName(`${elementId}`)[0];
+    element = document.getElementsByClassName(elementId)[0] as HTMLElement;
   } else if (identifierType === 'name') {
     element = document.querySelector(`[name="${elementId}"]`);
   }
@@ -49,21 +35,35 @@ async function performInfer(identifierType: string, elementId: string, attribute
     const result = fetchElementsByAttribute(element.innerHTML, attribute, attribValue);
     console.log({result, element});
     const text = extractInnerText(result);
-    const index = await inferLlm(String(text), "You are there to pick item from this list to buy ps5, just STRICTLY return the index from the array and nothing else.");
-    const targetElements = element.querySelectorAll(`[${attribute}="${attribValue}"]`);
-    console.log({targetElements});
-    if (targetElements.length > (index ?? 0)) {
-      const targetElement = targetElements[index ?? 0];
-      const productUrl = targetElement.querySelector('a')?.href;
-      if (productUrl) {
-        window.location.href = productUrl;
-      } else {
-        console.error('Product URL not found');
+
+    chrome.runtime.sendMessage(
+      {
+        action: 'inferLLM',
+        text: String(text),
+        prompt: "You are there to pick item from this list to buy ps5, just STRICTLY return the index from the array and nothing else."
+      }, 
+      (response) => {
+        if (response && response.index !== undefined && response.index !== null) {
+          const index = response.index;
+          const targetElements = element.querySelectorAll(`[${attribute}="${attribValue}"]`);
+          if (targetElements.length > index) {
+            const targetElement = targetElements[index];
+            const productUrl = targetElement.querySelector('a')?.href;
+            if (productUrl) {
+              window.location.href = productUrl;
+            } else {
+              console.error('Product URL not found');
+            }
+          } else {
+            console.error('Element not found at returned index');
+          }
+        } else if (response && response.error) {
+          console.error("Error from background inference:", response.error);
+        } else {
+          console.error("No valid response received from background script");
+        }
       }
-    } else {
-      console.error('Element with class a-list-link not found in result[0]');
-    }
-    // result.at(index ?? 0).click();
+    );
   } else {
     console.error('Element not found for scraping');
   }
