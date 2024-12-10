@@ -1,7 +1,9 @@
 const IMAGES = {
   transactionIconPath: '../../../assets/images/wallet/transactionIcon.svg',
   walletCardBgPath: '../../../assets/images/wallet/cardBg.svg',
-  kleoCoinPath: '../../../assets/images/wallet/kleoCoin.svg'
+  kleoCoinPath: '../../../assets/images/wallet/kleoCoin.svg',
+  spendIconPath: '../../../assets/images/wallet/spendIcon.svg',
+  incomeIconPath: '../../../assets/images/wallet/incomeIcon.svg'
 }
 
 const WALLET_PAGE_DATA = {
@@ -11,11 +13,13 @@ const WALLET_PAGE_DATA = {
   transactionCards: [
     {
       title: 'Total Spent',
-      value: 1146
+      value: 1146,
+      type: 'OUTGO'
     },
     {
       title: 'Total Recieved',
-      value: 2599
+      value: 2599,
+      type: 'INCOME'
     },
   ],
   title: "Previous Transactions",
@@ -71,11 +75,11 @@ export const Wallet = () => {
       >
         <div className="flex w-full flex-col gap-4 items-center">
           {/* title */}
-          <h4 className="font-sans text-base font-medium">
+          <h4 className="font-sans text-sm font-medium">
             Your balance is
           </h4>
           {/* numbers */}
-          <div className="flex flex-col gap-3">
+          <div className="flex flex-col gap-2">
             <div className="flex items-center gap-3">
               <img src={IMAGES.kleoCoinPath} alt="" className="size-10" />
               <h1 className="font-bold font-sans text-5xl">{pointsToString(1452)}</h1>
@@ -83,18 +87,19 @@ export const Wallet = () => {
             <h3 className="font-medium font-sans text-lg text-center">XP Points</h3>
           </div>
           {/* 2 cards */}
-          <div className="flex justify-center w-full gap-6 flex-wrap">
+          <div className="flex justify-center w-full max-w-md gap-4 flex-wrap">
             {WALLET_PAGE_DATA.transactionCards.map(transaction => (
               <StatCard
                 title={transaction.title}
                 value={transaction.value}
+                type={transaction.type as 'INCOME' | 'OUTGO'}
                 key={transaction.title}
               />
             ))}
           </div>
         </div>
         {/* Withdraw button */}
-        <div className="w-full px-4 py-3 bg-white hover:bg-white/80 cursor-pointer text-primary-700 text-center font-semibold text-lg rounded-xl">
+        <div className="w-full max-w-md px-4 py-3 bg-white hover:bg-white/80 cursor-pointer text-primary-700 text-center font-semibold text-lg rounded-xl">
           Withdraw Balance
         </div>
       </div>
@@ -121,13 +126,14 @@ export const Wallet = () => {
 interface StatCardProps {
   title: string,
   value: number,
+  type: "OUTGO" | "INCOME",
 }
 
-const StatCard = ({ title, value }: StatCardProps) => {
+const StatCard = ({ title, value, type }: StatCardProps) => {
   return (
-    <div className="w-full max-w-40 h-fit rounded-md border border-white/50 bg-white/10 p-1 flex justify-start items-center gap-2">
+    <div className="h-fit flex-1 rounded-md border border-white/50 bg-white/10 p-1 flex justify-start items-center gap-2">
       <div className="size-10 rounded-[4px] bg-white/10 flex justify-center items-center">
-        <img src={IMAGES.transactionIconPath} alt="" className="size-6" />
+        <img src={type === 'INCOME' ? IMAGES.incomeIconPath : IMAGES.spendIconPath} alt="" className="size-[22px]" />
       </div>
       <div className="flex flex-col gap-1 flex-1 min-w-fit">
         <p className="font-medium text-[10px]">{title}</p>
