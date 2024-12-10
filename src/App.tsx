@@ -18,12 +18,12 @@ function App() {
         <Route
           path="/app/*"
           element={
-            address ? <Main address={address} encryptedPrivateKey={encryptedPrivateKey} /> : <Navigate to="/login" />
+            address ? <Main /> : <Navigate to="/login" />
           }
         />
         <Route
           path="/login"
-          element={address ? <Navigate to="/app" /> : <Login encryptedPrivateKey={encryptedPrivateKey} setEncryptedPrivateKey={setEncryptedPrivateKey} address={address} setAddress={setAddress} />}
+          element={address ? <Navigate to="/app" /> : <Login />}
         />
         <Route path="*" element={<Navigate to={address ? "/app/tasks" : "/login"} />} />
       </Routes>
