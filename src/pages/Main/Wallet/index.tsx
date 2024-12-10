@@ -65,7 +65,7 @@ const pointsToString = (points: number | string): string => {
 
 export const Wallet = () => {
   return (
-    <div className="h-[calc(100vh-70px)] w-full bg-grayblue-100 p-6 flex flex-col items-center gap-6">
+    <div className="h-[calc(100vh-52px)] w-full bg-grayblue-100 p-6 flex flex-col items-center gap-6 overflow-auto">
       {/* Wallet Card */}
       <div
         className={`w-full flex flex-col items-center bg-cover bg-center bg-no-repeat p-4 gap-6 text-white rounded-lg`}
@@ -105,11 +105,11 @@ export const Wallet = () => {
       </div>
       {/* Title + Description */}
       <div className="w-full flex flex-col gap-1 font-sans">
-        <h1 className="font-bold text-2xl">{WALLET_PAGE_DATA.title}</h1>
-        <p className="text-xs text-gray-700">{WALLET_PAGE_DATA.desc}</p>
+        <h1 className="font-bold text-xl">{WALLET_PAGE_DATA.title}</h1>
+        <p className="text-xs">{WALLET_PAGE_DATA.desc}</p>
       </div>
       {/* Previous Transactions */}
-      <div className="flex flex-col gap-4 w-full overflow-auto">
+      <div className="flex flex-col gap-4 w-full">
         {WALLET_PAGE_DATA.transactions.map(transaction => (
           <TransactionCard
             amount={transaction.amount}
