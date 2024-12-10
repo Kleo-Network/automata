@@ -47,21 +47,21 @@ export const TaskCard = ({
     <div className="bg-white rounded-lg shadow-md w-full p-4 mb-4 flex flex-col gap-3">
       {/* Favicon + Title + Creator + Rating Row */}
       <div className="flex gap-4">
-        <div className="min-h-12 min-w-12 bg-grayblue-100 rounded-md p-2 flex items-center justify-center">
-          <img src={iconSrc} className="size-10" />
+        <div className="min-h-12 min-w-12 bg-grayblue-100 rounded-md p-3 flex items-center justify-center">
+          <img src={iconSrc} className="size-7 rounded-full" />
         </div>
         <div className="flex flex-col flex-1 gap-1">
           <div className="flex py-1 gap-2 justify-between">
             {/* Title */}
-            <h2 className="font-semibold text-lg">{title}</h2>
+            <h2 className="font-semibold text-base">{title}</h2>
             {/* Rating */}
             <div className="h-fit flex items-center gap-1 px-2 py-1 rounded-full bg-grayblue-100 min-w-fit">
               <img
                 src="../../assets/images/tasks/starIcon.svg"
                 alt=""
-                className="size-4"
+                className="size-3"
               />
-              <p className="text-xs">{rating} Rating</p>
+              <p className="text-[10px]">{rating} Rating</p>
             </div>
           </div>
           <p className="text-xs">Created by {creator}</p>
@@ -84,14 +84,17 @@ export const TaskCard = ({
       </div>
 
       {/* Action Buttons */}
-      <div className="flex justify-center">
+      <div className="flex justify-center font-medium w-full">
         {status === 'play' && (
-          <button
-            className="bg-blue-500 text-white px-4 py-2 rounded-md w-full hover:bg-blue-600"
-            onClick={handlePlay}
-          >
-            Play
-          </button>
+          <>
+            <button
+              className="bg-primary-600 text-white px-4 py-2 rounded-md w-full hover:bg-primary-800 flex gap-3 justify-center items-center"
+              onClick={handlePlay}
+            >
+              <img src="../../assets/images/Tasks/playIcon.svg" alt="" className='size-[18px]' />
+              Play Script
+            </button>
+          </>
         )}
         {status === 'confirm' && (
           <div className="flex gap-4 w-full">
@@ -130,7 +133,7 @@ interface StatPillProps {
 
 const StatPill = ({ label, value, iconSrc }: StatPillProps) => {
   return (
-    <div className="bg-grayblue-100 rounded-full p-2 gap-2 flex">
+    <div className="bg-grayblue-100 rounded-full p-2 gap-1 flex">
       <img src={iconSrc} alt="" className="size-4 rounded-full" />
       <p className="text-[10px]">
         <span className="font-bold">{label}</span> {value}
