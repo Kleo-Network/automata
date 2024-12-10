@@ -1,8 +1,11 @@
+// src/pages/Login/Login.tsx
+
 import { useState } from "react";
 import { FormInputField } from "./FormInput";
 import { FormButton } from "./FormButton";
 import { useNavigate } from "react-router-dom";
 
+import { createNewUser, restoreAccount } from '../../../content/index'
 const IMAGES = {
   KleoLogoInCirclePath: "../../assets/images/login/kleoLogoInCircle.svg",
   PersonIconPath: "../../assets/images/login/personIcon.svg",
@@ -46,13 +49,27 @@ export const Login = () => {
   const navigate = useNavigate();
 
   // TODO: @vaibhav Update the logic for handling the submissions. Right now redirecting to home page.
-  const handleCreateNewAccount = () => {
-    console.log("Created new account of: ", name);
-    navigate('/app/tasks');
+  const handleCreateNewAccount = async () => {
+    console.log("Creating new account for: ", name);
+    const response = await createNewUser(name);
+    if (response.success) {
+      console.log("Account created with address: ", response.address);
+      navigate('/app');
+    } else {
+      console.error("Error creating new account: ", response.error);
+      // Handle error (e.g., show a message to user)
+    }
   };
-  const handleImportYourAccount = () => {
-    console.log("Imported account of: ", privateKey);
-    navigate('/app/tasks');
+  const handleImportYourAccount = async () => {
+    console.log("Importing account with private key: ", privateKey);
+    const response = await restoreAccount(privateKey);
+    if (response.success) {
+      console.log("Account restored with address: ", response.address);
+      navigate('/app');
+    } else {
+      console.error("Error restoring account: ", response.error);
+      // Handle error
+    }
   };
 
   return (

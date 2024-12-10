@@ -1,4 +1,4 @@
-// content.ts
+// content/index.ts
 
 import { extractInnerText, fetchElementsByAttribute } from "./templatize";
 
@@ -103,4 +103,28 @@ function performClick(identifierType: string, elementId: string, idName: string)
   } else {
     console.error('Element not found for clicking');
   }
+}
+
+export function createNewUser(name: string): Promise<{ success: boolean; address?: string; error?: string }> {
+  return new Promise((resolve) => {
+    chrome.runtime.sendMessage({ action: 'createUser', name }, (response) => {
+      if (response && response.success) {
+        resolve({ success: true, address: response.address });
+      } else {
+        resolve({ success: false, error: response?.error || 'Unknown error occurred' });
+      }
+    });
+  });
+}
+
+export function restoreAccount(privateKey: string): Promise<{ success: boolean; address?: string; error?: string }> {
+  return new Promise((resolve) => {
+    chrome.runtime.sendMessage({ action: 'restoreAccount', privateKey }, (response) => {
+      if (response && response.success) {
+        resolve({ success: true, address: response.address });
+      } else {
+        resolve({ success: false, error: response?.error || 'Unknown error occurred' });
+      }
+    });
+  });
 }

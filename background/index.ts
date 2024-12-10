@@ -1,4 +1,6 @@
-//background.ts
+//background/index.ts
+
+
 import LLM from './utils/llm';
 // This is to define any action background needs to do onclick of page. 
 // TODO: Write a function for user to get private key from wallet. 

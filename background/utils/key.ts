@@ -1,6 +1,8 @@
+// background/utils/key.ts
+
+import { ethers } from "ethers";
 // Make sure to include ethers.js in your project
 // You can include it via CDN in your HTML file or install it via npm
-import { ethers } from "ethers";
 
 export async function generateEthereumKeyPair() {
     // Create a random wallet

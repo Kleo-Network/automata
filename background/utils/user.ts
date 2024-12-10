@@ -1,3 +1,5 @@
+// background/user.ts
+
 import { apiRequest } from './api';
 import { decryptPrivateKeyFromStorage } from './helpers';
 import { encryptPrivateKey, generateEthereumKeyPair } from './key';
