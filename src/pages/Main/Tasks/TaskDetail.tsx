@@ -113,7 +113,7 @@ export const TaskDetails = () => {
             value={inputValue} // Bind to the state variable
             onChange={(e) => setInputValue(e.target.value)} // Update state on change
             placeholder={TASK_DETAIL_PAGE_DATA.taskCardDetails.inputPlaceholder}
-            className="mt-1 min-h-40 w-full rounded-lg bg-grayblue-200 p-4 text-xs placeholder:text-gray-600 focus:outline-none focus:ring-2 focus:ring-primary-500"
+            className="mt-1 min-h-32 w-full rounded-lg bg-grayblue-200 p-4 text-xs placeholder:text-gray-600 focus:outline-none focus:ring-2 focus:ring-primary-500"
           />
         </div>
       )}

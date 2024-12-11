@@ -30,7 +30,7 @@ export const TaskCard = ({
   const handleViewTask = () => navigate(`/app/task/${id}`);
 
   return (
-    <div className="bg-white rounded-lg shadow-md w-full p-4 mb-4 flex flex-col gap-3">
+    <div className={`bg-white rounded-lg shadow-md w-full p-4 flex flex-col gap-3 ${showPlayButton ? 'mb-4' : ''}`}>
       {/* Favicon + Title + Creator + Rating Row */}
       <div className="flex gap-4">
         <div className="min-h-12 min-w-12 bg-grayblue-100 rounded-md p-3 flex items-center justify-center">
