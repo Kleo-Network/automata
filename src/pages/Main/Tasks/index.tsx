@@ -20,7 +20,8 @@ const TASKS_PAGE_DATA = {
         { label: 'Earn', value: '+5.5k', iconSrc: '../../assets/images/tasks/dollarIcon.svg' },
       ],
       rating: 3.4,
-      creator: 'cyborg_129'
+      creator: 'cyborg_129',
+      id: "1"
     },
     {
       description: "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.",
@@ -33,7 +34,8 @@ const TASKS_PAGE_DATA = {
         { label: 'Earn', value: '+5.5k', iconSrc: '../../assets/images/tasks/dollarIcon.svg' },
       ],
       rating: 3.4,
-      creator: 'cyborg_129'
+      creator: 'cyborg_129',
+      id: "2"
     },
     {
       description: "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.",
@@ -46,7 +48,8 @@ const TASKS_PAGE_DATA = {
         { label: 'Earn', value: '+5.5k', iconSrc: '../../assets/images/tasks/dollarIcon.svg' },
       ],
       rating: 3.4,
-      creator: 'cyborg_129'
+      creator: 'cyborg_129',
+      id: "3"
     },
     {
       description: "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.",
@@ -59,7 +62,8 @@ const TASKS_PAGE_DATA = {
         { label: 'Earn', value: '+5.5k', iconSrc: '../../assets/images/tasks/dollarIcon.svg' },
       ],
       rating: 3.4,
-      creator: 'cyborg_129'
+      creator: 'cyborg_129',
+      id: "4"
     },
     {
       description: "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.",
@@ -72,7 +76,8 @@ const TASKS_PAGE_DATA = {
         { label: 'Earn', value: '+5.5k', iconSrc: '../../assets/images/tasks/dollarIcon.svg' },
       ],
       rating: 3.4,
-      creator: 'cyborg_129'
+      creator: 'cyborg_129',
+      id: "5"
     },
   ]
 };
@@ -124,7 +129,8 @@ export const Tasks = () => {
               script={taskCard.script}
               stats={taskCard.stats}
               title={taskCard.title}
-              key={index}
+              id={taskCard.id}
+              key={taskCard.id}
             />
           })
         }
