@@ -123,6 +123,12 @@ async function executeActions(actions: ScriptAction[]) {
 
   chrome.runtime.onMessage.addListener(async (request, sender, sendResponse) => {
     console.log({request, sender, sendResponse});
+    if (request.action === 'createUser'){
+      // TODO: call imported function from user.ts
+    }
+    if (request.action === 'restoreAccount'){
+      // TODO: call imported function from user.ts
+    }
     if (request.action === 'executeScript') {
       
         const content = request.input;

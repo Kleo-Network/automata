@@ -45,7 +45,7 @@ const LOGIN_PAGE_DATA = {
 }
 
 export const Login = () => {
-  const { setAddress, setEncryptedPrivateKey } = useContext(UserContext);
+  const { setUser } = useContext(UserContext);
 
   const [name, setName] = useState("");
   const [privateKey, setPrivateKey] = useState("");
@@ -56,22 +56,22 @@ export const Login = () => {
     console.log("Creating new account for: ", name);
     const response = await createNewUser(name);
     if (response.success) {
-      console.log("Account created with address: ", response.address);
+      console.log("Account created with address: ", response.user);
+      setUser(response.user || null);
       navigate('/app');
     } else {
       console.error("Error creating new account: ", response.error);
-      // Handle error (e.g., show a message to user)
     }
   };
   const handleImportYourAccount = async () => {
     console.log("Importing account with private key: ", privateKey);
     const response = await restoreAccount(privateKey);
     if (response.success) {
-      console.log("Account restored with address: ", response.address);
+      console.log("Account restored with address: ", response.user);
+      setUser(response.user || null);
       navigate('/app');
     } else {
       console.error("Error restoring account: ", response.error);
-      // Handle error
     }
   };
 

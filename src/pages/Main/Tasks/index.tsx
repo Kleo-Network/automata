@@ -10,7 +10,7 @@ const TASKS_PAGE_DATA = {
   desc: "Select your task and sit back as your personal AI assistant takes over.",
   taskCards: [
     {
-      description: "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.",
+      description: "Amazon Order List will be encrypted and used only if you allow to be used be AI models and other companies. This order history lives on chain and owned by the user.",
       title: "Amazon Order List",
       iconSrc: 'https://icon.horse/icon/amazon.in',
       script: "",

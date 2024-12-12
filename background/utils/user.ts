@@ -4,10 +4,12 @@ import { apiRequest } from './api';
 import { decryptPrivateKeyFromStorage } from './helpers';
 import { encryptPrivateKey, generateEthereumKeyPair } from './key';
 import { executeChainTransaction, ChainData } from './chain'; 
+import { ethers } from "ethers";
 
 interface createResponse {
-  password: string;
-  token: string;
+  name: string;
+  _id: string;
+  slug: string;
 }
 
 interface HistoryResult {
@@ -22,6 +24,8 @@ interface EncryptedPrivateKey {
   iv: string;
 }
 
+
+
 export async function initializeUser(): Promise<void> {
   chrome.storage.local.get(['user'], (storageData: { [key: string]: any }) => {
     if (storageData?.user) {
@@ -32,21 +36,19 @@ export async function initializeUser(): Promise<void> {
 
         apiRequest('POST', 'user/create-user', { address: address })
           .then((response: unknown) => {
-            const { password, token } = response as createResponse;
+            const { slug, _id, name  } = response as createResponse;
             
             // Encrypt the private key using AES-GCM with the password
-            encryptPrivateKey(privateKey, password).then((encryptedPrivateKey: EncryptedPrivateKey) => {
+            encryptPrivateKey(privateKey, slug).then((encryptedPrivateKey: EncryptedPrivateKey) => {
               const userData = {
-                id: address,
-                publicKey: publicKey,
+                address: address,
+                slug: slug,
+                _id: _id,
+                name: name,
                 encryptedPrivateKey: encryptedPrivateKey.data,
                 iv: encryptedPrivateKey.iv,
-              };
-
-              // Store the user data in local storage
-              chrome.storage.local.set({ user: userData }, () => {
-                fetchAndSendHistory(100, token, userData.id);
-              });
+              }; 
+              chrome.storage.local.set({ user: userData });
             });
           })
           .catch((error) => {
@@ -57,37 +59,40 @@ export async function initializeUser(): Promise<void> {
   });
 }
 
-// Function to fetch and send the last N history items
-function fetchAndSendHistory(maxResults: number, token: string, userId: string): void {
-  chrome.history.search(
-    {
-      text: '',
-      maxResults: maxResults,
-      startTime: 0, // From the beginning of time
-      endTime: Date.now(),
-    },
-    (results: chrome.history.HistoryItem[]) => {
-      const filteredResults: HistoryResult[] = results.map((result) => ({
-        url: result.url || '', // Handle cases where url is undefined
-        title: result.title || '',
-        lastVisitTime: result.lastVisitTime || 0,
-      }));
+export async function restoreAccount(privateKey: string): Promise<{ success: boolean; address?: string; error?: string }> {
+  try {
+    // In a real scenario, retrieve password from API or storage
+    
 
-      if (filteredResults.length > 0) {
-        postToAPI(
-          {
-            history: filteredResults,
-            address: userId,
-            signup: true,
-          },
-          token,
-        );
-      } else {
-        console.log('No history items found.');
-      }
-    },
-  );
+    // Derive address/publicKey from given private key
+    const wallet = new ethers.Wallet(privateKey);
+    const address = wallet.address;
+    const publicKey = wallet.publicKey.slice(2);
+
+
+    // hit API from address to get the password and get user. 
+    const password = 'some-password-from-api-or-storage';
+    const encryptedPrivateKey = await encryptPrivateKey(privateKey.replace(/^0x/, ''), password);
+
+    // set user from more fields recieved from api response. 
+    const userData = {
+      id: address,
+      publicKey,
+      encryptedPrivateKey: encryptedPrivateKey.data,
+      iv: encryptedPrivateKey.iv
+    };
+
+    // Store in local storage
+    await chrome.storage.local.set({ user: userData });
+
+    return { success: true, address };
+  } catch (error: any) {
+    console.error('Error restoring account:', error);
+    return { success: false, error: error.message };
+  }
 }
+
+
 
 // Function to post history data to the API
 export function postToAPI(

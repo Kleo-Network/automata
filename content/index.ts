@@ -1,7 +1,7 @@
 // content/index.ts
 
 import { extractInnerText, fetchElementsByAttribute } from "./templatize";
-
+import {UserData} from '../src/common/hooks/UserContext';
 
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   if (request.action === 'input') {
@@ -105,11 +105,11 @@ function performClick(identifierType: string, elementId: string, idName: string)
   }
 }
 
-export function createNewUser(name: string): Promise<{ success: boolean; address?: string; error?: string }> {
+export function createNewUser(name: string): Promise<{ success: boolean; user?: UserData; error?: string }> {
   return new Promise((resolve) => {
     chrome.runtime.sendMessage({ action: 'createUser', name }, (response) => {
       if (response && response.success) {
-        resolve({ success: true, address: response.address });
+        resolve({ success: true, user: response.user });
       } else {
         resolve({ success: false, error: response?.error || 'Unknown error occurred' });
       }
@@ -117,11 +117,11 @@ export function createNewUser(name: string): Promise<{ success: boolean; address
   });
 }
 
-export function restoreAccount(privateKey: string): Promise<{ success: boolean; address?: string; error?: string }> {
+export function restoreAccount(privateKey: string): Promise<{ success: boolean; user?: UserData; error?: string }> {
   return new Promise((resolve) => {
     chrome.runtime.sendMessage({ action: 'restoreAccount', privateKey }, (response) => {
       if (response && response.success) {
-        resolve({ success: true, address: response.address });
+        resolve({ success: true, user: response.user });
       } else {
         resolve({ success: false, error: response?.error || 'Unknown error occurred' });
       }
