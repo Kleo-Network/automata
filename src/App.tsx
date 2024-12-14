@@ -6,8 +6,6 @@ import { UserProvider, UserContext } from './common/hooks/UserContext';
 
 function App() {
   const { user } = useContext(UserContext);
-
-  user = "ad"
   return (
     <UserProvider>
 

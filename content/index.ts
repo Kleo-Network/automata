@@ -107,8 +107,9 @@ function performClick(identifierType: string, elementId: string, idName: string)
 
 export function createNewUser(name: string): Promise<{ success: boolean; user?: UserData; error?: string }> {
   return new Promise((resolve) => {
-    chrome.runtime.sendMessage({ action: 'createUser', name }, (response) => {
+    chrome.runtime.sendMessage({ action: 'createUser', name: name }, (response) => {
       if (response && response.success) {
+        console.log("content page", response)
         resolve({ success: true, user: response.user });
       } else {
         resolve({ success: false, error: response?.error || 'Unknown error occurred' });
@@ -119,7 +120,7 @@ export function createNewUser(name: string): Promise<{ success: boolean; user?: 
 
 export function restoreAccount(privateKey: string): Promise<{ success: boolean; user?: UserData; error?: string }> {
   return new Promise((resolve) => {
-    chrome.runtime.sendMessage({ action: 'restoreAccount', privateKey }, (response) => {
+    chrome.runtime.sendMessage({ action: 'restoreAccount', privateKey: privateKey }, (response) => {
       if (response && response.success) {
         resolve({ success: true, user: response.user });
       } else {

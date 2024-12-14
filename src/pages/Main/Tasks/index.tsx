@@ -12,7 +12,7 @@ const TASKS_PAGE_DATA = {
     {
       description: "Amazon Order List will be encrypted and used only if you allow to be used be AI models and other companies. This order history lives on chain and owned by the user.",
       title: "Amazon Order List",
-      iconSrc: 'https://icon.horse/icon/amazon.in',
+      iconSrc: 'https://www.google.com/s2/favicons?sz=64&domain_url=amazon.com',
       script: "",
       stats: [
         { label: 'Used', value: '10.2k times', iconSrc: "../../assets/images/tasks/profileIcon.svg" },
@@ -23,13 +23,13 @@ const TASKS_PAGE_DATA = {
       id: "1"
     },
     {
-      description: "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.",
-      title: "Amazon Order List",
-      iconSrc: 'https://icon.horse/icon/amazon.in',
+      description: "This script fetches your spotify Playlists to understand what kind of songs you enjoy.",
+      title: "Spotify Playlists",
+      iconSrc: 'https://www.google.com/s2/favicons?sz=64&domain_url=spotify.com',
       script: "",
       stats: [
-        { label: 'Used', value: '10.2k times', iconSrc: "../../assets/images/tasks/profileIcon.svg" },
-        { label: 'Earn', value: '+5.5k', iconSrc: '../../assets/images/tasks/dollarIcon.svg' },
+        { label: 'Used', value: '8.2k times', iconSrc: "../../assets/images/tasks/profileIcon.svg" },
+        { label: 'Earn', value: '+2.2k', iconSrc: '../../assets/images/tasks/dollarIcon.svg' },
       ],
       rating: 3.4,
       creator: 'cyborg_129',
@@ -47,35 +47,7 @@ const TASKS_PAGE_DATA = {
       rating: 3.4,
       creator: 'cyborg_129',
       id: "3"
-    },
-    {
-      description: "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.",
-      title: "Amazon Order List",
-      iconSrc: 'https://icon.horse/icon/amazon.in',
-      script: "",
-      stats: [
-        { label: 'Used', value: '10.2k times', iconSrc: "../../assets/images/tasks/profileIcon.svg" },
-        { label: 'Sponsored', value: 'Amazon', iconSrc: 'https://icon.horse/icon/amazon.in' },
-        { label: 'Earn', value: '+5.5k', iconSrc: '../../assets/images/tasks/dollarIcon.svg' },
-      ],
-      rating: 3.4,
-      creator: 'cyborg_129',
-      id: "4"
-    },
-    {
-      description: "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.",
-      title: "Amazon Order List",
-      iconSrc: 'https://icon.horse/icon/amazon.in',
-      script: "",
-      stats: [
-        { label: 'Used', value: '10.2k times', iconSrc: "../../assets/images/tasks/profileIcon.svg" },
-        { label: 'Sponsored', value: 'Amazon', iconSrc: 'https://icon.horse/icon/amazon.in' },
-        { label: 'Earn', value: '+5.5k', iconSrc: '../../assets/images/tasks/dollarIcon.svg' },
-      ],
-      rating: 3.4,
-      creator: 'cyborg_129',
-      id: "5"
-    },
+    }
   ]
 };
 
@@ -103,7 +75,7 @@ export const Tasks = () => {
         <p className="text-xs text-gray-700">{TASKS_PAGE_DATA.desc}</p>
       </div>
       {/* Search Bar */}
-      <div className="flex items-center gap-3 rounded-lg bg-grayblue-200 px-4 py-2 w-full">
+      {/* <div className="flex items-center gap-3 rounded-lg bg-grayblue-200 px-4 py-2 w-full">
         <img src={IMAGES.searchIconPath} className="size-[18px]" />
         <input
           type="text"
@@ -113,7 +85,7 @@ export const Tasks = () => {
           onKeyDown={handleKeyDown}
           className="w-full bg-transparent text-sm outline-none placeholder:text-gray-500"
         />
-      </div>
+      </div> */}
       {/* Tasks List */}
       <div className="overflow-auto w-full flex-1">
         {

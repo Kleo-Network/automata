@@ -12,6 +12,15 @@ interface createResponse {
   slug: string;
 }
 
+interface User {
+  address: string;
+  slug: string;
+  _id: string;
+  name: string;
+  encryptedPrivateKey: string;
+  iv: string;
+}
+
 interface HistoryResult {
   url?: string; // Make url optional to match the Chrome API's HistoryItem
   title?: string;
@@ -26,66 +35,81 @@ interface EncryptedPrivateKey {
 
 
 
-export async function initializeUser(): Promise<void> {
-  chrome.storage.local.get(['user'], (storageData: { [key: string]: any }) => {
-    if (storageData?.user) {
-      console.log('User already exists.');
-    } else {
-      generateEthereumKeyPair().then((keyPair) => {
-        const { privateKey, publicKey, address } = keyPair;
-
-        apiRequest('POST', 'user/create-user', { address: address })
-          .then((response: unknown) => {
-            const { slug, _id, name  } = response as createResponse;
-            
-            // Encrypt the private key using AES-GCM with the password
-            encryptPrivateKey(privateKey, slug).then((encryptedPrivateKey: EncryptedPrivateKey) => {
-              const userData = {
-                address: address,
-                slug: slug,
-                _id: _id,
-                name: name,
-                encryptedPrivateKey: encryptedPrivateKey.data,
-                iv: encryptedPrivateKey.iv,
-              }; 
-              chrome.storage.local.set({ user: userData });
-            });
-          })
-          .catch((error) => {
-            console.error('Error creating user:', error);
-          });
-      });
-    }
+// Utility function to get data from chrome storage as a promise
+function chromeStorageGet(keys: string[] | string): Promise<{ [key: string]: any }> {
+  return new Promise((resolve, reject) => {
+    chrome.storage.local.get(keys, (data) => {
+      if (chrome.runtime.lastError) {
+        return reject(chrome.runtime.lastError);
+      }
+      resolve(data);
+    });
   });
 }
 
-export async function restoreAccount(privateKey: string): Promise<{ success: boolean; address?: string; error?: string }> {
+// Modified initializeUser function
+export async function initializeUser(name: string): Promise<User | undefined> {
   try {
-    // In a real scenario, retrieve password from API or storage
-    
+    const storageData = await chromeStorageGet(['user']);
+    if (storageData?.user) {
+      console.log('User already exists.');
+      return storageData.user;
+    } else {
+      const keyPair = await generateEthereumKeyPair();
+      const { privateKey, address } = keyPair;
+  
+      const response = await apiRequest<createResponse>('POST', 'user/create-user', { address });
+      const { slug, _id } = response;
+  
+      const encryptedPrivateKey = await encryptPrivateKey(privateKey, slug);
+  
+      const userData = {
+        address: address,
+        slug: slug,
+        _id: _id,
+        name: name,
+        encryptedPrivateKey: encryptedPrivateKey.data,
+        iv: encryptedPrivateKey.iv,
+      };
+  
+      await chrome.storage.local.set({ user: userData });
+      return userData;
+    }
+  } catch (error) {
+    console.error('Error creating user:', error);
+    throw error;
+  }
+}
 
+export async function restoreAccount(privateKey: string): Promise<{ success: boolean; user?: User; error?: string }> {
+  try {
+   
     // Derive address/publicKey from given private key
     const wallet = new ethers.Wallet(privateKey);
     const address = wallet.address;
     const publicKey = wallet.publicKey.slice(2);
 
+    const response = await apiRequest<createResponse>('GET', `user/get-user/${address}`);
+    console.log("restorea account user api", response)
 
     // hit API from address to get the password and get user. 
-    const password = 'some-password-from-api-or-storage';
+    const password = response.slug;
     const encryptedPrivateKey = await encryptPrivateKey(privateKey.replace(/^0x/, ''), password);
 
     // set user from more fields recieved from api response. 
     const userData = {
-      id: address,
-      publicKey,
+      _id: response._id,
       encryptedPrivateKey: encryptedPrivateKey.data,
+      slug: password,
+      name: response.name,
+      address: address,
       iv: encryptedPrivateKey.iv
     };
 
     // Store in local storage
     await chrome.storage.local.set({ user: userData });
 
-    return { success: true, address };
+    return { success: true, user: userData };
   } catch (error: any) {
     console.error('Error restoring account:', error);
     return { success: false, error: error.message };

@@ -12,13 +12,13 @@ interface RequestOptions extends RequestInit {
 }
 
 // General API helper function
-export async function apiRequest(
+export async function apiRequest<T>(
     method: HttpMethod,
     endpoint: string,
     data?: unknown,
     authToken?: string,
     baseUrl: string = PRODUCTION,
-): Promise<string> {
+): Promise<T> {
     const apiEndpoint = `${baseUrl}/${endpoint}`;
     
     const headers: Record<string, string> = {

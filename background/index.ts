@@ -2,6 +2,8 @@
 
 
 import LLM from './utils/llm';
+import { getPageContent } from '../content/utils/getPageContent';
+import {initializeUser, restoreAccount} from './utils/user';
 // This is to define any action background needs to do onclick of page. 
 // TODO: Write a function for user to get private key from wallet. 
 type Action = 'new-tab' | 'input' | 'click' | 'infer' | 'wait';
@@ -122,13 +124,28 @@ async function executeActions(actions: ScriptAction[]) {
   }
 
   chrome.runtime.onMessage.addListener(async (request, sender, sendResponse) => {
+    console.log("lister running from background.ts")
     console.log({request, sender, sendResponse});
-    if (request.action === 'createUser'){
-      // TODO: call imported function from user.ts
+    if (request.action === 'createUser') {
+      try {
+        const user = await initializeUser(request.name);
+        sendResponse({ success: true, user });
+      } catch (error: any) {
+        sendResponse({ success: false, error: error.message });
+      }
+      return true;
     }
-    if (request.action === 'restoreAccount'){
-      // TODO: call imported function from user.ts
+  
+    if (request.action === 'restoreAccount') {
+      try {
+        const user = await restoreAccount(request.privateKey);
+        sendResponse({ success: true, user });
+      } catch (error: any) {
+        sendResponse({ success: false, error: error.message });
+      }
+      return true;
     }
+  
     if (request.action === 'executeScript') {
       
         const content = request.input;
