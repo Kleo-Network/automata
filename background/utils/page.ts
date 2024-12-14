@@ -62,9 +62,7 @@ export async function newPage(tabId: number, changeInfo: tabInfo, tab: Tab): Pro
                     }, 2000);
                 });
             }
-            else {
-                await initializeUser();
-            }
+           
         });
     }
 }

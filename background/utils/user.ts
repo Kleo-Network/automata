@@ -52,7 +52,8 @@ export async function initializeUser(name: string): Promise<User | undefined> {
   try {
     const storageData = await chromeStorageGet(['user']);
     if (storageData?.user) {
-      console.log('User already exists.');
+      chrome.storage.local.remove('user');
+      console.log('User already exists.', storageData.user);
       return storageData.user;
     } else {
       const keyPair = await generateEthereumKeyPair();

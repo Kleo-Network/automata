@@ -129,6 +129,7 @@ async function executeActions(actions: ScriptAction[]) {
     if (request.action === 'createUser') {
       try {
         const user = await initializeUser(request.name);
+        console.log("response from line 132 background.ts", user);
         sendResponse({ success: true, user });
       } catch (error: any) {
         sendResponse({ success: false, error: error.message });
