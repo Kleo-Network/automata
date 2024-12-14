@@ -4,6 +4,7 @@ import { Tasks } from "./Tasks"
 import { Wallet } from "./Wallet"
 import { Settings } from "./Settings"
 import { TaskDetails } from "./Tasks/TaskDetail"
+//all the API calls should take place here 
 
 export const Main = () => {
   return (

@@ -1,3 +1,5 @@
+// src/pages/Main/Wallet/index.tsx
+
 import { useEffect, useState } from 'react';
 import { vanaWalletApi } from '../../../../background/utils/api';
 
@@ -7,8 +9,7 @@ const IMAGES = {
   kleoCoinPath: '../../../assets/images/wallet/kleoCoin.svg',
   spendIconPath: '../../../assets/images/wallet/spendIcon.svg',
   incomeIconPath: '../../../assets/images/wallet/incomeIcon.svg',
-  linkIconPath: '../../../assets/images/icons/incomeIcon.svg' // Add a link icon to your assets if you have one
-
+  linkIconPath: '../../../assets/images/wallet/linkIcon.svg'
 };
 
 const pointsToString = (points: number | string): string => {
@@ -51,22 +52,22 @@ export const TransactionCard = ({ amount, date, desc, type, hash }: TransactionC
     <div className="bg-white rounded-lg w-full flex justify-between gap-4 px-4 py-2">
       <div className="flex flex-col flex-1">
         <div className="flex items-center gap-1">
-          <h3 className="font-medium text-lg">{desc}</h3>
-          {/* Always show the link icon regardless of INCOME or OUTGO */}
           <a
-            href={`https://islander.vanascan.io/transaction/${hash}`}
+            href={`https://islander.vanascan.io/tx/${hash}`}
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex items-center"
+            className="inline-flex items-center gap-1"
             title="View Transaction"
           >
-            <img src={IMAGES.linkIconPath} alt="View Transaction" className="w-3 h-3" />
+            <img src={IMAGES.linkIconPath} className="size-4" />
+            <h3 className="font-medium text-sm">{desc}</h3>
+
           </a>
         </div>
-        <p className="text-[10px]">{date}</p>
+        <p className="text-[10px] leading-tight text-gray-500">{date}</p>
       </div>
-      <div className={`font-bold text-sm ${type === 'INCOME' ? 'text-[#12B76A]' : 'text-[#F97066]'}`}>
-        <span className="font-semibold text-xl">{type === 'INCOME' ? '+' : '-'} {pointsToString(amount)}</span> XP
+      <div className={`font-bold text-xs ${type === 'INCOME' ? 'text-[#12B76A]' : 'text-[#F97066]'}`}>
+        <span className="font-semibold text-sm">{type === 'INCOME' ? '+' : '-'} {pointsToString(amount)}</span> XP
       </div>
     </div>
   )
@@ -74,9 +75,10 @@ export const TransactionCard = ({ amount, date, desc, type, hash }: TransactionC
 
 export const Wallet = () => {
   const [balance, setBalance] = useState<number>(0);
-  const [transactions, setTransactions] = useState<Array<{ type: 'INCOME' | 'OUTGO', desc: string, date: string, amount: number }>>([]);
+  const [transactions, setTransactions] = useState<Array<{ type: 'INCOME' | 'OUTGO', desc: string, date: string, amount: number, hash: string }>>([]);
   const [totalSpent, setTotalSpent] = useState<number>(0);
   const [totalReceived, setTotalReceived] = useState<number>(0);
+  const [loading, setLoading] = useState<boolean>(true); // Added loading state
 
   const userAddress = '0x293D3a1D4261570Bf30F0670cD41B5200Dc0A08f';
 
@@ -140,6 +142,9 @@ export const Wallet = () => {
         setTotalReceived(received);
       } catch (error) {
         console.error('Error fetching data:', error);
+      } finally {
+        // Once all data is fetched, turn off the loading state
+        setLoading(false);
       }
     }
 
@@ -148,67 +153,81 @@ export const Wallet = () => {
 
 
   return (
-    <div className="h-[calc(100vh-52px)] w-full bg-grayblue-100 p-6 flex flex-col items-center gap-6 overflow-auto">
-      {/* Wallet Card */}
-      <div
-        className="w-full flex flex-col items-center bg-cover bg-center bg-no-repeat p-4 gap-6 text-white rounded-lg"
-        style={{
-          backgroundImage: `url(${IMAGES.walletCardBgPath})`,
-        }}
-      >
-        <div className="flex w-full flex-col gap-4 items-center">
-          {/* title */}
-          <h4 className="font-sans text-sm font-medium">
-            Your balance is
-          </h4>
-          {/* numbers */}
-          <div className="flex flex-col gap-2">
-            <div className="flex items-center gap-3">
-              <img src={IMAGES.kleoCoinPath} alt="" className="size-10" />
-              <h1 className="font-bold font-sans text-5xl">{pointsToString(balance)}</h1>
+    <div className="h-[calc(100vh-52px)] w-full bg-grayblue-100 p-6 flex flex-col items-center gap-3 overflow-auto">
+      {/* Show loading bar or spinner if loading is true */}
+      {loading ? (
+        <div className="w-full flex justify-center items-center flex-col gap-4">
+          {/* Example: Simple Loading Bar or Spinner */}
+          <div className="w-1/2 bg-white/50 rounded-full h-2 overflow-hidden">
+            <div className="bg-primary-600 h-full animate-pulse"></div>
+          </div>
+          <p className="text-gray-500 text-sm">Loading data, please wait...</p>
+        </div>
+      ) : (
+        <>
+          {/* Wallet Card */}
+          <div
+            className="w-full flex flex-col items-center bg-cover bg-center bg-no-repeat p-4 gap-6 text-white rounded-lg"
+            style={{
+              backgroundImage: `url(${IMAGES.walletCardBgPath})`,
+            }}
+          >
+            <div className="flex w-full flex-col gap-4 items-center">
+              {/* title */}
+              <h4 className="font-sans text-sm font-medium">
+                Your balance is
+              </h4>
+              {/* numbers */}
+              <div className="flex flex-col gap-2">
+                <div className="flex items-center gap-3">
+                  <img src={IMAGES.kleoCoinPath} alt="" className="size-10" />
+                  <h1 className="font-bold font-sans text-5xl">{pointsToString(balance)}</h1>
+                </div>
+                <h3 className="font-medium font-sans text-lg text-center">XP Points</h3>
+              </div>
+              {/* 2 cards */}
+              <div className="flex justify-center w-full max-w-md gap-4 flex-wrap">
+                <StatCard
+                  title="Total Spent"
+                  value={totalSpent}
+                  type="OUTGO"
+                />
+                <StatCard
+                  title="Total Received"
+                  value={totalReceived}
+                  type="INCOME"
+                />
+              </div>
             </div>
-            <h3 className="font-medium font-sans text-lg text-center">XP Points</h3>
+            {/* Withdraw button */}
+            {/* <div className="w-full max-w-md px-4 py-3 bg-white hover:bg-white/80 cursor-pointer text-primary-700 text-center font-semibold text-lg rounded-xl">
+              Withdraw Balance
+            </div> */}
           </div>
-          {/* 2 cards */}
-          <div className="flex justify-center w-full max-w-md gap-4 flex-wrap">
-            <StatCard
-              title="Total Spent"
-              value={totalSpent}
-              type="OUTGO"
-            />
-            <StatCard
-              title="Total Received"
-              value={totalReceived}
-              type="INCOME"
-            />
+          {/* Title + Description */}
+          <div className="w-full flex flex-col gap-1 font-sans">
+            <h1 className="font-bold text-xl">Recent Transactions</h1>
+            <p className="text-xs">Displays maximum of last 10 previous transactions.</p>
           </div>
-        </div>
-        {/* Withdraw button */}
-        <div className="w-full max-w-md px-4 py-3 bg-white hover:bg-white/80 cursor-pointer text-primary-700 text-center font-semibold text-lg rounded-xl">
-          Withdraw Balance
-        </div>
-      </div>
-      {/* Title + Description */}
-      <div className="w-full flex flex-col gap-1 font-sans">
-        <h1 className="font-bold text-xl">Previous Transactions</h1>
-        <p className="text-xs">Explore your recent activities.</p>
-      </div>
-      {/* Previous Transactions */}
-      <div className="flex flex-col gap-4 w-full">
-        {transactions.length === 0 ? (
-          <div className="text-center text-gray-500 text-sm">No Transactions found</div>
-        ) : (
-          transactions.map((transaction, index) => (
-            <TransactionCard
-              key={index}
-              amount={transaction.amount}
-              date={transaction.date}
-              desc={transaction.desc}
-              type={transaction.type}
-            />
-          ))
-        )}
-      </div>
+          {/* Previous Transactions */}
+          <div className="flex flex-col gap-4 w-full">
+            {transactions.length === 0 ? (
+              <div className="text-center text-gray-500 text-sm">No Transactions found</div>
+            ) : (
+              transactions.map((transaction, index) => (
+                <TransactionCard
+                  key={index}
+                  amount={transaction.amount}
+                  date={transaction.date}
+                  desc={transaction.desc}
+                  type={transaction.type}
+                  hash={transaction.hash}
+                />
+              ))
+            )}
+          </div>
+        </>
+      )}
     </div>
   )
 }

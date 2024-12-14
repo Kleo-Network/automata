@@ -11,7 +11,7 @@ const IMAGES = {
 }
 
 const SETTINGS_PAGE_DATA = {
-  generalSettingsTitle: 'General Setting',
+  generalSettingsTitle: 'General Settings',
   generalSettings: [
     {
       id: '1',
