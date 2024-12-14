@@ -6,7 +6,7 @@ const IMAGES = {
 }
 
 const TASKS_PAGE_DATA = {
-  title: "Your Personal AI Assistant",
+  title: "Own Data, Earn Crypto Tokens",
   desc: "Select your task and sit back as your personal AI assistant takes over.",
   taskCards: [
     {
@@ -16,7 +16,6 @@ const TASKS_PAGE_DATA = {
       script: "",
       stats: [
         { label: 'Used', value: '10.2k times', iconSrc: "../../assets/images/tasks/profileIcon.svg" },
-        { label: 'Sponsored', value: 'Amazon', iconSrc: 'https://icon.horse/icon/amazon.in' },
         { label: 'Earn', value: '+5.5k', iconSrc: '../../assets/images/tasks/dollarIcon.svg' },
       ],
       rating: 3.4,
@@ -30,7 +29,6 @@ const TASKS_PAGE_DATA = {
       script: "",
       stats: [
         { label: 'Used', value: '10.2k times', iconSrc: "../../assets/images/tasks/profileIcon.svg" },
-        { label: 'Sponsored', value: 'Amazon', iconSrc: 'https://icon.horse/icon/amazon.in' },
         { label: 'Earn', value: '+5.5k', iconSrc: '../../assets/images/tasks/dollarIcon.svg' },
       ],
       rating: 3.4,
@@ -44,7 +42,6 @@ const TASKS_PAGE_DATA = {
       script: "",
       stats: [
         { label: 'Used', value: '10.2k times', iconSrc: "../../assets/images/tasks/profileIcon.svg" },
-        { label: 'Sponsored', value: 'Amazon', iconSrc: 'https://icon.horse/icon/amazon.in' },
         { label: 'Earn', value: '+5.5k', iconSrc: '../../assets/images/tasks/dollarIcon.svg' },
       ],
       rating: 3.4,

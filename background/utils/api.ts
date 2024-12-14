@@ -16,9 +16,10 @@ export async function apiRequest(
     method: HttpMethod,
     endpoint: string,
     data?: unknown,
-    authToken?: string
+    authToken?: string,
+    baseUrl: string = PRODUCTION,
 ): Promise<string> {
-    const apiEndpoint = `${PRODUCTION}/${endpoint}`;
+    const apiEndpoint = `${baseUrl}/${endpoint}`;
     
     const headers: Record<string, string> = {
         'Content-Type': 'application/json',
@@ -45,4 +46,8 @@ export async function apiRequest(
         console.error("Error in API request:", error);
         throw error;
     }
+}
+export async function vanaWalletApi(method: HttpMethod, endpoint: string, authToken?: string) {
+    const ISLANDER_API = 'https://api.islander.vanascan.io/api/v2';
+    return apiRequest(method, endpoint, undefined, authToken, ISLANDER_API);
 }
