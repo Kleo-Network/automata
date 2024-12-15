@@ -55,10 +55,11 @@ export const Login = () => {
   const handleCreateNewAccount = async () => {
     console.log("Creating new account for: ", name);
     const response = await createNewUser(name);
+    console.log("what's the response? line 58 Login.tsx", response)
     if (response.success) {
       console.log("Account created with address: ", response.user);
       setUser(response.user || null);
-      navigate('/app');
+      navigate('/app/tasks');
     } else {
       console.error("Error creating new account: ", response.error);
     }
@@ -69,7 +70,7 @@ export const Login = () => {
     if (response.success) {
       console.log("Account restored with address: ", response.user);
       setUser(response.user || null);
-      navigate('/app');
+      navigate('/app/tasks');
     } else {
       console.error("Error restoring account: ", response.error);
     }

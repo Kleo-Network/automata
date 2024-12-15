@@ -2,7 +2,6 @@
 
 import { Method } from 'axios';
 import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 
 type Options<T> = {
   method?: Method;

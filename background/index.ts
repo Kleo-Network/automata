@@ -123,52 +123,69 @@ async function executeActions(actions: ScriptAction[]) {
     };
   }
 
-  chrome.runtime.onMessage.addListener(async (request, sender, sendResponse) => {
+  chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     console.log("lister running from background.ts")
-    console.log({request, sender, sendResponse});
+    
     if (request.action === 'createUser') {
-      try {
-        const user = await initializeUser(request.name);
-        console.log("response from line 132 background.ts", user);
-        sendResponse({ success: true, user });
-      } catch (error: any) {
-        sendResponse({ success: false, error: error.message });
-      }
+      // Create a promise wrapper to handle the async operation
+      (async () => {
+        try {
+          const user = await initializeUser(request.name);
+          console.log("response from background.ts", user);
+          sendResponse({ success: true, user: user });
+        } catch (error: any) {
+          sendResponse({ success: false, error: error.message });
+        }
+      })();
+      // Return true to indicate we want to send a response asynchronously
       return true;
     }
   
     if (request.action === 'restoreAccount') {
-      try {
-        const user = await restoreAccount(request.privateKey);
-        sendResponse({ success: true, user });
-      } catch (error: any) {
-        sendResponse({ success: false, error: error.message });
-      }
+      (async () => {
+        try {
+          const user = await restoreAccount(request.privateKey);
+          sendResponse({ success: true, user: user });
+        } catch (error: any) {
+          sendResponse({ success: false, error: error.message });
+        }
+      })();
       return true;
     }
   
     if (request.action === 'executeScript') {
-      
-        const content = request.input;
-        // const content = await fetchScript(request.input);
-        if (content) {
-          console.log("content", {script: content});
-          const actions = parseScript(content);
-          executeActions(actions);
+      (async () => {
+        try {
+          const content = request.input;
+          if (content) {
+            console.log("content", {script: content});
+            const actions = parseScript(content);
+            await executeActions(actions);
+            sendResponse({ success: true });
+          } else {
+            sendResponse({ success: false, error: 'No content provided' });
+          }
+        } catch (error: any) {
+          sendResponse({ success: false, error: error.message });
         }
-    }
-    else if (request.action === 'inferLLM'){
-      try {
-        const { text, prompt } = request;
-        const result = await llm.sendRequest(text, prompt);
-        sendResponse({ index: result });
-      } catch (error: any) {
-        sendResponse({ error: error.message });
-      }
+      })();
       return true;
     }
-  });
 
+    if (request.action === 'inferLLM') {
+      (async () => {
+        try {
+          const { text, prompt } = request;
+          const result = await llm.sendRequest(text, prompt);
+          sendResponse({ success: true, index: result });
+        } catch (error: any) {
+          sendResponse({ success: false, error: error.message });
+        }
+      })();
+      return true;
+    }
+    return true;
+});
 
 chrome.sidePanel
           .setPanelBehavior({ openPanelOnActionClick: true })

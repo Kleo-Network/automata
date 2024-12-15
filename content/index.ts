@@ -108,8 +108,11 @@ function performClick(identifierType: string, elementId: string, idName: string)
 export function createNewUser(name: string): Promise<{ success: boolean; user?: UserData; error?: string }> {
   return new Promise((resolve) => {
     chrome.runtime.sendMessage({ action: 'createUser', name: name }, (response) => {
+      if (chrome.runtime.lastError) {
+        console.error("Error sending message:", chrome.runtime.lastError);
+      }
+      console.log("what's the response? line 111 index.ts", response)
       if (response && response.success) {
-        console.log("content page", response)
         resolve({ success: true, user: response.user });
       } else {
         resolve({ success: false, error: response?.error || 'Unknown error occurred' });
