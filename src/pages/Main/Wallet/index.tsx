@@ -1,8 +1,8 @@
 // src/pages/Main/Wallet/index.tsx
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useContext } from 'react';
 import { vanaWalletApi } from '../../../../background/utils/api';
-
+import { UserContext } from '../../../common/hooks/UserContext';
 const IMAGES = {
   transactionIconPath: '../../../assets/images/wallet/transactionIcon.svg',
   walletCardBgPath: '../../../assets/images/wallet/cardBg.svg',
@@ -80,7 +80,8 @@ export const Wallet = () => {
   const [totalReceived, setTotalReceived] = useState<number>(0);
   const [loading, setLoading] = useState<boolean>(true); // Added loading state
 
-  const userAddress = '0x293D3a1D4261570Bf30F0670cD41B5200Dc0A08f';
+  const { user } = useContext(UserContext);
+  const userAddress = user?.address;
 
   useEffect(() => {
     const fetchData = async () => {

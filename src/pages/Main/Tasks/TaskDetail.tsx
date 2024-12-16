@@ -1,6 +1,7 @@
 import { useParams } from "react-router-dom";
 import { TaskCard } from "./TaskCard";
-import { useState } from "react";
+import { useState, useMemo } from "react";
+import useFetch, { FetchStatus } from "../../../common/hooks/useFetch";
 
 enum HISTORY_ITEMS {
   SUCCESS = 'SUCCESS',
@@ -21,26 +22,9 @@ const IMAGES = {
   errorIconPath: '../../../assets/images/Tasks/redCross.svg',
   runningIconPath: '../../../assets/images/Tasks/chevronRight.svg',
   infoIconPath: '../../../assets/images/Tasks/infoIcon.svg'
-}
+};
 
 const TASK_DETAIL_PAGE_DATA = {
-  taskCardDetails: {
-    description: "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.",
-    title: "Amazon Order List",
-    iconSrc: 'https://icon.horse/icon/amazon.in',
-    script: "new-tab#https://amazon.in\nwait\ninput#id#twotabsearchtextbox#ps5\nclick#id#nav-search-submit-button\nwait\ninfer#class#s-search-results#data-component-type#s-search-result\nwait\nclick#id#buy-now-button",
-    stats: [
-      { label: 'Used', value: '10.2k times', iconSrc: "../../assets/images/tasks/profileIcon.svg" },
-      { label: 'Sponsored', value: 'Amazon', iconSrc: 'https://icon.horse/icon/amazon.in' },
-      { label: 'Earn', value: '+5.5k', iconSrc: '../../assets/images/tasks/dollarIcon.svg' },
-    ],
-    rating: 3.4,
-    creator: 'cyborg_129',
-    inputRequired: true,
-    inputDescription: 'Fill in the input details below',
-    inputInitialValue: 'Credentials : ',
-    inputPlaceholder: 'Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut ullamco'
-  },
   logHistory: [
     {
       type: HISTORY_ITEMS.RUNNING,
@@ -75,50 +59,99 @@ const TASK_DETAIL_PAGE_DATA = {
       content: 'Lorem ipsum dolor sit amet, consectetur adipiscing '
     },
   ]
+};
+
+interface ScriptData {
+  _id: string;
+  creator_address: string;
+  transaction_hash: string;
+  script: string;
+  used: number;
+  earn_points: number;
+  rating: number;
+  description: string;
+  name: string;
+  sponsored: string;
+  logo: string;
+  created_at: string;
+  verified: boolean;
+}
+
+type ScriptResponse = {
+  script: ScriptData;
 }
 
 export const TaskDetails = () => {
   const { taskId } = useParams();
   const [scriptStatus, setScriptStatus] = useState(SCRIPT_STATUS.NOT_STARTED);
-  const [inputValue, setInputValue] = useState(TASK_DETAIL_PAGE_DATA.taskCardDetails.inputInitialValue);
+
+  // Fetch the specific script details from the API
+  const { data, status, error } = useFetch<ScriptResponse>(`script/${taskId}`);
+
+  // Handle input requirement logic (for demonstration)
+  const inputRequired = useMemo(() => parseInt(taskId || '2') % 2 === 0, [taskId]);
+  const [inputValue, setInputValue] = useState('Credentials : ');
 
   const handlePlayScript = () => {
-    // Directly execute the script without confirmation
-    //alert('Script execution started!');
-    chrome.runtime.sendMessage({ action: 'executeScript', input: TASK_DETAIL_PAGE_DATA.taskCardDetails.script });
-
-    setScriptStatus(SCRIPT_STATUS.RUNNING);
-    // setTimeout(() => {
-    //   setScriptStatus(SCRIPT_STATUS.FINISHED);
-    // }, 2000);
+    if (data?.script.script) {
+      chrome.runtime.sendMessage({ action: 'executeScript', input: data.script.script });
+      setScriptStatus(SCRIPT_STATUS.RUNNING);
+    }
   }
 
-  // TODO: @vaibhav this is to add dynamically the inputRequired. Please Remove this when integrate.
-  TASK_DETAIL_PAGE_DATA.taskCardDetails.inputRequired = parseInt(taskId || '2') % 2 === 0;
+  if (status === FetchStatus.LOADING) {
+    return (
+      <div className="p-6 flex flex-col w-full h-[calc(100vh-52px)] gap-4 bg-grayblue-100">
+        <div>Loading task details...</div>
+      </div>
+    );
+  }
+
+  if (status === FetchStatus.ERROR) {
+    return (
+      <div className="p-6 flex flex-col w-full h-[calc(100vh-52px)] gap-4 bg-grayblue-100">
+        <div className="text-red-500">Error: {error}</div>
+      </div>
+    );
+  }
+
+  // Once data is successfully fetched, use it to populate the TaskCard
+  const scriptData = data?.script;
+  if (!scriptData) {
+    return (
+      <div className="p-6 flex flex-col w-full h-[calc(100vh-52px)] gap-4 bg-grayblue-100">
+        <div>No data found for this task.</div>
+      </div>
+    );
+  }
 
   return (
     <div className="p-6 flex flex-col w-full h-[calc(100vh-52px)] gap-4 bg-grayblue-100">
       <TaskCard
-        creator={TASK_DETAIL_PAGE_DATA.taskCardDetails.creator}
-        description={TASK_DETAIL_PAGE_DATA.taskCardDetails.description}
-        iconSrc={TASK_DETAIL_PAGE_DATA.taskCardDetails.iconSrc}
-        rating={TASK_DETAIL_PAGE_DATA.taskCardDetails.rating}
-        script={TASK_DETAIL_PAGE_DATA.taskCardDetails.script}
-        stats={TASK_DETAIL_PAGE_DATA.taskCardDetails.stats}
-        title={TASK_DETAIL_PAGE_DATA.taskCardDetails.title}
-        id={taskId!}
+        creator={scriptData.creator_address}
+        description={scriptData.description}
+        iconSrc={scriptData.logo || 'https://example.com/default-icon.png'}
+        rating={scriptData.rating}
+        script={scriptData.script}
+        stats={[
+          { label: 'Used', value: `${scriptData.used} times`, iconSrc: "../../assets/images/tasks/profileIcon.svg" },
+          { label: 'Sponsored', value: scriptData.sponsored, iconSrc: scriptData.logo || 'https://example.com/default-icon.png' },
+          { label: 'Earn', value: `+${scriptData.earn_points}`, iconSrc: '../../assets/images/tasks/dollarIcon.svg' },
+        ]}
+        title={scriptData.name}
+        id={scriptData._id}
         showPlayButton={false}
       />
       {/* Input conditionally */}
-      {TASK_DETAIL_PAGE_DATA.taskCardDetails.inputRequired && (
+      {inputRequired && (
         <div className="flex flex-col gap-1">
           <h1 className="font-semibold text-lg">Input</h1>
-          <p className="text-xs text-gray-700">{TASK_DETAIL_PAGE_DATA.taskCardDetails.inputDescription}</p>
+          <p className="text-xs text-gray-700">Fill in the input details below</p>
           <textarea
             id="input"
             value={inputValue}
             onChange={(e) => setInputValue(e.target.value)}
-            placeholder={TASK_DETAIL_PAGE_DATA.taskCardDetails.inputPlaceholder}
+            placeholder="Lorem ipsum dolor sit amet, consectetur adipiscing elit..."
             className="mt-1 min-h-32 w-full rounded-lg bg-grayblue-200 p-4 text-xs placeholder:text-gray-600 focus:outline-none focus:ring-2 focus:ring-primary-500"
           />
         </div>
@@ -176,4 +209,4 @@ const HistoryItem = ({ type, content }: HistoryItemProps) => {
       </p>
     </div>
   )
-}
+};

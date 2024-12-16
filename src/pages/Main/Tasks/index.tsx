@@ -1,58 +1,63 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { TaskCard } from "./TaskCard";
+import useFetch, { FetchStatus } from "../../../common/hooks/useFetch";
+import { UserContext } from '../../../common/hooks/UserContext';
+import { useContext } from 'react';
+type Script = {
+  _id: string;
+  creator_address: string;
+  transaction_hash: string;
+  script: string;
+  used: number;
+  earn_points: number;
+  rating: number;
+  description: string;
+  name: string;
+  sponsored: string;
+  logo: string;
+  created_at: string;
+  verified: boolean;
+};
+type ScriptsResponse = {
+  scripts: Script[];
+};
 
-const IMAGES = {
-  searchIconPath: '../../../assets/images/Tasks/searchIcon.svg'
-}
+// const IMAGES = {
+//   searchIconPath: '../../../assets/images/Tasks/searchIcon.svg'
+// }
 
 const TASKS_PAGE_DATA = {
   title: "Own Data, Earn Crypto Tokens",
-  desc: "Select your task and sit back as your personal AI assistant takes over.",
-  taskCards: [
-    {
-      description: "Amazon Order List will be encrypted and used only if you allow to be used be AI models and other companies. This order history lives on chain and owned by the user.",
-      title: "Amazon Order List",
-      iconSrc: 'https://www.google.com/s2/favicons?sz=64&domain_url=amazon.com',
-      script: "",
-      stats: [
-        { label: 'Used', value: '10.2k times', iconSrc: "../../assets/images/tasks/profileIcon.svg" },
-        { label: 'Earn', value: '+5.5k', iconSrc: '../../assets/images/tasks/dollarIcon.svg' },
-      ],
-      rating: 3.4,
-      creator: 'cyborg_129',
-      id: "1"
-    },
-    {
-      description: "This script fetches your spotify Playlists to understand what kind of songs you enjoy.",
-      title: "Spotify Playlists",
-      iconSrc: 'https://www.google.com/s2/favicons?sz=64&domain_url=spotify.com',
-      script: "",
-      stats: [
-        { label: 'Used', value: '8.2k times', iconSrc: "../../assets/images/tasks/profileIcon.svg" },
-        { label: 'Earn', value: '+2.2k', iconSrc: '../../assets/images/tasks/dollarIcon.svg' },
-      ],
-      rating: 3.4,
-      creator: 'cyborg_129',
-      id: "2"
-    },
-    {
-      description: "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.",
-      title: "Amazon Order List",
-      iconSrc: 'https://icon.horse/icon/amazon.in',
-      script: "",
-      stats: [
-        { label: 'Used', value: '10.2k times', iconSrc: "../../assets/images/tasks/profileIcon.svg" },
-        { label: 'Earn', value: '+5.5k', iconSrc: '../../assets/images/tasks/dollarIcon.svg' },
-      ],
-      rating: 3.4,
-      creator: 'cyborg_129',
-      id: "3"
-    }
-  ]
+  desc: "Select your task and sit back as your personal AI assistant takes over."
 };
 
 export const Tasks = () => {
   const [searchString, setSearchString] = useState('');
+  const { user } = useContext(UserContext);
+  const { data, status, error } = useFetch<ScriptsResponse>(`script/all/${user?.address}`);
+
+  const taskCards = useMemo(() => {
+    if (data?.scripts) {
+      // Map the fetched scripts to the TaskCard props format
+      return data.scripts
+        .filter((script) => script.verified) // Ensure only verified scripts
+        .map((script) => ({
+          id: script._id,
+          title: script.name,
+          description: script.description,
+          iconSrc: script.logo || 'https://example.com/default-icon.png',
+          script: script.script,
+          rating: script.rating,
+          creator: script.creator_address,
+          stats: [
+            { label: 'Used', value: `${script.used} times`, iconSrc: "../../assets/images/tasks/profileIcon.svg" },
+            { label: 'Earn', value: `+${script.earn_points}`, iconSrc: '../../assets/images/tasks/dollarIcon.svg' },
+          ]
+        }));
+    } else {
+      return [];
+    }
+  }, [data]);
 
   const handleSearchUpdate = (newValue: string) => {
     setSearchString(newValue);
@@ -88,21 +93,32 @@ export const Tasks = () => {
       </div> */}
       {/* Tasks List */}
       <div className="overflow-auto w-full flex-1">
-        {
-          TASKS_PAGE_DATA.taskCards.map((taskCard, index) => {
-            return <TaskCard
-              creator={taskCard.creator}
-              description={taskCard.description}
-              iconSrc={taskCard.iconSrc}
-              rating={taskCard.rating}
-              script={taskCard.script}
-              stats={taskCard.stats}
-              title={taskCard.title}
-              id={taskCard.id}
-              key={taskCard.id}
-            />
-          })
-        }
+        {status === FetchStatus.LOADING && (
+          <div>Loading tasks...</div>
+        )}
+        {status === FetchStatus.ERROR && (
+          <div className="text-red-500">Error: {error}</div>
+        )}
+        {status === FetchStatus.SUCCESS && taskCards.length === 0 && (
+          <div>No verified tasks found.</div>
+        )}
+        {status === FetchStatus.SUCCESS && taskCards.length > 0 && (
+          <>
+            {taskCards.map((taskCard) => (
+              <TaskCard
+                key={taskCard.id}
+                creator={taskCard.creator}
+                description={taskCard.description}
+                iconSrc={taskCard.iconSrc}
+                rating={taskCard.rating}
+                script={taskCard.script}
+                stats={taskCard.stats}
+                title={taskCard.title}
+                id={taskCard.id}
+              />
+            ))}
+          </>
+        )}
       </div>
     </div>
   )

@@ -10,77 +10,65 @@ const IMAGES = {
   tick: '../../../assets/images/settings/tick.svg'
 }
 
+const LLM_OPTIONS = [
+  { value: 'gpt4', label: 'GPT 4 Mini' },
+  { value: 'claude', label: 'Claude Haiku' },
+  { value: 'llama', label: 'LLAMA 3 70b' }
+];
+
 const SETTINGS_PAGE_DATA = {
   generalSettingsTitle: 'General Settings',
   generalSettings: [
     {
       id: '1',
+      title: 'Next Withdrawal',
+      description: 'The next VANA Liquidity event is scheduled in 21 days.',
+      type: 'default'
+    },
+    {
+      id: '2',
       title: 'Private Key',
-      description: '1234567890',
+      description: '123456',
       type: 'key'
     },
     {
-      id: '2',
-      title: 'Lorem Ipsum dolor',
-      description: 'Lorem ispusm dolor sit amet',
-      type: 'disabled'
-    },
-    {
       id: '3',
-      title: 'Lorem Ipsum dolor',
-      description: 'Lorem ispusm dolor sit amet',
-      type: 'toggle',
-      enabled: true
+      title: 'Select LLM',
+      description: 'Select what LLM to use',
+      type: 'select',
+      options: LLM_OPTIONS
     },
     {
       id: '4',
-      title: 'Lorem Ipsum dolor',
-      description: 'Lorem ispusm dolor sit amet',
-      type: 'toggle',
-      enabled: false
-    },
-    {
-      id: '5',
-      title: 'Lorem Ipsum dolor',
-      description: 'Lorem ispusm dolor sit amet',
-      type: 'default'
-    }
-  ],
-  advancedSettingsTitle: 'Advanced Settings',
-  advancedSettingsDesc: 'Advised not to change these',
-  advancedSettings: [
-    {
-      id: '1',
-      title: 'Lorem Ipsum dolor',
-      description: 'Lorem ispusm dolor sit amet',
+      title: 'RPC URL',
+      description: 'https://rpc.vanamainnet.com',
       type: 'copy'
     },
     {
-      id: '2',
-      title: 'Lorem Ipsum dolor',
-      description: 'Lorem ispusm dolor sit amet',
-      type: 'default'
-    },
-    {
-      id: '3',
-      title: 'Lorem Ipsum dolor',
-      description: 'Lorem ispusm dolor sit amet',
-      type: 'default'
-    },
-    {
-      id: '4',
-      title: 'Lorem Ipsum dolor',
-      description: 'Lorem ispusm dolor sit amet',
-      type: 'default'
-    },
-    {
       id: '5',
-      title: 'Lorem Ipsum dolor',
-      description: 'Lorem ispusm dolor sit amet',
+      title: 'Chain',
+      description: 'VANA MAINNET (Chain ID: 1234)',
       type: 'default'
+    }
+  ],
+  supportTitle: 'Contact and Support',
+  supportSettings: [
+    {
+      id: '1',
+      title: 'Follow Kleo on X',
+      description: '@KleoAI',
+      type: 'link',
+      url: 'https://x.com/KleoAI'
     },
+    {
+      id: '2',
+      title: 'Withdrawal Guide',
+      description: 'Learn how to withdraw your VANA tokens',
+      type: 'link',
+      url: 'https://docs.kleo.ai/withdrawal-guide'
+    }
   ]
-}
+};
 
 export const Settings = () => {
   return (
@@ -103,16 +91,16 @@ export const Settings = () => {
 
       {/* Advanced Settings Title + Description */}
       <div className="w-full flex flex-col gap-1 font-sans">
-        <h1 className="font-bold text-xl">{SETTINGS_PAGE_DATA.advancedSettingsTitle}</h1>
-        <p className="text-xs">{SETTINGS_PAGE_DATA.advancedSettingsDesc}</p>
+        <h1 className="font-bold text-xl">{SETTINGS_PAGE_DATA.supportTitle}</h1>
+        <p className="text-xs">{SETTINGS_PAGE_DATA.supportTitle}</p>
       </div>
       {/* Advanced Settings */}
       <div className="w-full max-w-2xl">
         <div className="rounded-lg bg-white p-[14px] flex flex-col gap-3">
-          {SETTINGS_PAGE_DATA.advancedSettings.map((setting, index) => (
+          {SETTINGS_PAGE_DATA.supportSettings.map((setting, index) => (
             <>
               <SettingItem key={setting.id} setting={setting as Setting} />
-              {index < SETTINGS_PAGE_DATA.advancedSettings.length - 1 && (
+              {index < SETTINGS_PAGE_DATA.supportSettings.length - 1 && (
                 <div className="h-px bg-gray-200" />
               )}
             </>
