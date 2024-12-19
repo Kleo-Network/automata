@@ -1,6 +1,6 @@
 import { useParams } from "react-router-dom";
 import { TaskCard } from "./TaskCard";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import useFetch, { FetchStatus } from "../../../common/hooks/useFetch";
 
 enum HISTORY_ITEMS {
@@ -84,6 +84,9 @@ type ScriptResponse = {
 export const TaskDetails = () => {
   const { taskId } = useParams();
   const [scriptStatus, setScriptStatus] = useState(SCRIPT_STATUS.NOT_STARTED);
+  const [port, setPort] = useState<chrome.runtime.Port | null>(null);
+
+
 
   // Fetch the specific script details from the API
   const { data, status, error } = useFetch<ScriptResponse>(`script/${taskId}`);
@@ -91,11 +94,66 @@ export const TaskDetails = () => {
   // Handle input requirement logic (for demonstration)
   const inputRequired = useMemo(() => parseInt(taskId || '2') % 2 === 0, [taskId]);
   const [inputValue, setInputValue] = useState('Credentials : ');
+  interface Update {
+    timestamp: number;
+    message: string;
+  }
+  const [updates, setUpdates] = useState<Update[]>([]);
+
+  useEffect(() => {
+    // Connect to background script
+    const newPort = chrome.runtime.connect({ name: "tracking-port" });
+    setPort(newPort);
+    console.log('Frontend: Connected to background script', newPort);
+
+    // Send initial message to background
+    newPort.postMessage({
+      action: 'START_TRACKING',
+      taskId: taskId
+    });
+
+    // Handle incoming messages
+    newPort.onMessage.addListener((update: Update) => {
+      console.log('Frontend: Received message from background:', update);
+      setUpdates(prev => [...prev, update]);
+
+      // Check if tracking completed
+      if (update.message === 'Tracking completed') {
+        console.log("Frontend: Tracking completed");
+        setScriptStatus(SCRIPT_STATUS.FINISHED);
+      }
+    });
+
+    // Cleanup on unmount
+    return () => {
+      console.log('Frontend: Disconnecting port');
+      newPort.disconnect();
+    };
+  }, [taskId]);
+
 
   const handlePlayScript = () => {
     if (data?.script.script) {
-      chrome.runtime.sendMessage({ action: 'executeScript', input: data.script.script });
-      setScriptStatus(SCRIPT_STATUS.RUNNING);
+      console.log('Frontend: Executing script:', data.script.script);
+      chrome.runtime.sendMessage(
+        {
+          action: 'executeScript',
+          input: data.script.script
+        },
+        (response) => {
+          console.log('Frontend: Received execute script response:', response);
+          if (response?.success) {
+            setScriptStatus(SCRIPT_STATUS.RUNNING);
+          } else {
+            setScriptStatus(SCRIPT_STATUS.ERROR);
+            // Add error to updates
+            setUpdates(prev => [...prev, {
+              timestamp: Date.now(),
+              message: `Error: ${response?.error || 'Script execution failed'}`
+            }]);
+          }
+        }
+      );
     }
   }
 
@@ -171,8 +229,8 @@ export const TaskDetails = () => {
       <h1 className="font-semibold text-lg mt-2">Log History</h1>
       {/* history container */}
       <div className="rounded-lg flex-1 px-4 py-6 bg-grayblue-800 text-xs text-white w-full overflow-auto">
-        {TASK_DETAIL_PAGE_DATA.logHistory.map((historyItem, index) =>
-          <HistoryItem content={historyItem.content} type={historyItem.type} key={index} />
+        {updates.map((historyItem, index) =>
+          <HistoryItem content={historyItem.message} type={HISTORY_ITEMS.RUNNING} key={index} />
         )}
       </div>
     </div>

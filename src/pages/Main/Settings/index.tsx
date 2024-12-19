@@ -72,38 +72,38 @@ const SETTINGS_PAGE_DATA = {
 
 export const Settings = () => {
   return (
-    <div className="h-[calc(100vh-52px)] w-full bg-grayblue-100 p-6 flex flex-col items-center gap-4 overflow-auto">
+    <div className="h-[calc(100vh-52px)] w-full bg-grayblue-100 p-6 flex flex-col items-center gap-4 overflow-auto font-sans">
       {/* General Settings Title */}
       <div className="w-full text-xl font-bold">{SETTINGS_PAGE_DATA.generalSettingsTitle}</div>
       {/* General Settings */}
       <div className="w-full max-w-2xl">
         <div className="rounded-lg bg-white p-[14px] flex flex-col gap-3">
           {SETTINGS_PAGE_DATA.generalSettings.map((setting, index) => (
-            <>
-              <SettingItem key={setting.id} setting={setting as Setting} />
+            <div key={setting.id}>
+              <SettingItem setting={setting as Setting} />
               {index < SETTINGS_PAGE_DATA.generalSettings.length - 1 && (
                 <div className="h-px bg-gray-200" />
               )}
-            </>
+            </div>
           ))}
         </div>
       </div>
 
-      {/* Advanced Settings Title + Description */}
+      {/* Support Settings Title + Description */}
       <div className="w-full flex flex-col gap-1 font-sans">
         <h1 className="font-bold text-xl">{SETTINGS_PAGE_DATA.supportTitle}</h1>
         <p className="text-xs">{SETTINGS_PAGE_DATA.supportTitle}</p>
       </div>
-      {/* Advanced Settings */}
+      {/* Support Settings */}
       <div className="w-full max-w-2xl">
         <div className="rounded-lg bg-white p-[14px] flex flex-col gap-3">
           {SETTINGS_PAGE_DATA.supportSettings.map((setting, index) => (
-            <>
-              <SettingItem key={setting.id} setting={setting as Setting} />
+            <div key={setting.id}>
+              <SettingItem setting={setting as Setting} />
               {index < SETTINGS_PAGE_DATA.supportSettings.length - 1 && (
                 <div className="h-px bg-gray-200" />
               )}
-            </>
+            </div>
           ))}
         </div>
       </div>
@@ -111,7 +111,7 @@ export const Settings = () => {
   )
 }
 
-export type SettingType = 'default' | 'toggle' | 'disabled' | 'copy' | 'key'
+export type SettingType = 'default' | 'toggle' | 'disabled' | 'copy' | 'key' | 'select' | 'link'
 
 export interface Setting {
   id: string
@@ -119,18 +119,23 @@ export interface Setting {
   description: string
   type: SettingType
   enabled?: boolean
+  options?: { value: string; label: string }[]
+  url?: string
 }
 
 const SettingItem = ({ setting }: { setting: Setting }) => {
   const [enabled, setEnabled] = useState(setting.enabled);
-  const [copied, setCopied] = useState(false); // State to handle copy status
+  const [copied, setCopied] = useState(false);
+  const [selectedOption, setSelectedOption] = useState(setting.options?.[0]?.value || '');
 
   const handleCopy = () => {
-    // Copy the description to the
     navigator.clipboard.writeText(setting.description);
-    // Show the tick icon for 2 seconds
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
+  };
+
+  const handleSelectChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    setSelectedOption(e.target.value);
   };
 
   return (
@@ -138,10 +143,31 @@ const SettingItem = ({ setting }: { setting: Setting }) => {
       <div className="flex items-center justify-between gap-4 w-full">
         <div className="space-y-1 w-full">
           <h3 className="font-medium">{setting.title}</h3>
-          <div className={`${setting.type === 'disabled' ? 'flex p-2 bg-grayblue-100 w-full rounded-md' : ''}`}>
-            <p className="text-xs">{setting.type === 'key'
-              ? privateKeyToStarString(setting.description) // Render key with stars
-              : setting.description}</p>
+          <div
+            className={`${setting.type === 'disabled' ? 'flex p-2 bg-grayblue-100 w-full rounded-md' : ''}`}
+          >
+            {setting.type === 'select' && setting.options ? (
+              <div className="flex flex-col gap-1">
+                <p className="text-xs">{setting.description}</p>
+                <select
+                  value={selectedOption}
+                  onChange={handleSelectChange}
+                  className="border border-gray-300 rounded-md px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-[#8257E6]"
+                >
+                  {setting.options.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            ) : (
+              <p className="text-xs">
+                {setting.type === 'key'
+                  ? privateKeyToStarString(setting.description)
+                  : setting.description}
+              </p>
+            )}
           </div>
         </div>
         {setting.type === 'toggle' && (
@@ -159,11 +185,21 @@ const SettingItem = ({ setting }: { setting: Setting }) => {
         {(setting.type === 'copy' || setting.type === 'key') && (
           <button onClick={handleCopy}>
             <img
-              src={copied ? IMAGES.tick : IMAGES.copy} // Show tick or copy icon
+              src={copied ? IMAGES.tick : IMAGES.copy}
               alt=""
               className="size-6"
             />
           </button>
+        )}
+        {setting.type === 'link' && setting.url && (
+          <a
+            href={setting.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-sm text-blue-600 hover:text-blue-800"
+          >
+            Open
+          </a>
         )}
       </div>
     </div>

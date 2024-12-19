@@ -184,7 +184,7 @@ export const Wallet = () => {
                   <img src={IMAGES.kleoCoinPath} alt="" className="size-10" />
                   <h1 className="font-bold font-sans text-5xl">{pointsToString(balance)}</h1>
                 </div>
-                <h3 className="font-medium font-sans text-lg text-center">XP Points</h3>
+                <h3 className="font-medium font-sans text-lg text-center">KDAT Token</h3>
               </div>
               {/* 2 cards */}
               <div className="flex justify-center w-full max-w-md gap-4 flex-wrap">
