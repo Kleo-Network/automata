@@ -1,8 +1,31 @@
-import { useState } from "react"
+import { useEffect, useState } from "react"
+import crypto from 'crypto';
+
+// TODO: @vaibhav Please update this function and use it.
+const decryptKey = (encryptedKey: string, secretKey: string, iv: string): void => {
+  try {
+    // Decode the base64-encoded encrypted key, secretKey, and IV
+    const encryptedBuffer = Buffer.from(encryptedKey, 'base64');
+    const keyBuffer = Buffer.from(secretKey, 'utf-8');
+    const ivBuffer = Buffer.from(iv, 'utf-8');
+
+    // Create a decipher instance using AES-256-CBC
+    const decipher = crypto.createDecipheriv('aes-256-cbc', keyBuffer, ivBuffer);
+
+    // Decrypt the key
+    let decrypted = decipher.update(encryptedBuffer, undefined, 'utf-8');
+    decrypted += decipher.final('utf-8');
+
+    // Log the decrypted key
+    console.log('Decrypted Key:', decrypted);
+  } catch (error: any) {
+    console.error('Error during decryption:', error.message);
+  }
+};
 
 const privateKeyToStarString = (key: string) => {
   if (key.length <= 2) return key; // If the key is too short, return as is
-  return key.slice(0, 2) + '*'.repeat(key.length - 2);
+  return key.slice(0, 2) + '*'.repeat(Math.min(key.length - 2, 8));
 };
 
 const IMAGES = {
@@ -28,7 +51,7 @@ const SETTINGS_PAGE_DATA = {
     {
       id: '2',
       title: 'Private Key',
-      description: '123456',
+      description: '',
       type: 'key'
     },
     {
@@ -71,6 +94,34 @@ const SETTINGS_PAGE_DATA = {
 };
 
 export const Settings = () => {
+  const [settingsData, setSettingsData] = useState(SETTINGS_PAGE_DATA.generalSettings);
+
+  useEffect(() => {
+    // Define an async function inside useEffect
+    const fetchUser = async () => {
+      try {
+        const result = await chrome.storage.local.get('user');
+        if (result.user && result.user.encryptedPrivateKey) {
+          // Update the state to reflect the updated settings
+          setSettingsData((prevSettings) =>
+            prevSettings.map((setting) =>
+              setting.id === '2'
+                ? { ...setting, description: result.user.encryptedPrivateKey }
+                : setting
+            )
+          );
+        } else {
+          console.error('encryptedPrivateKey not found');
+        }
+      } catch (error) {
+        console.error('Error fetching user data:', error);
+      }
+    };
+
+    // Call the async function
+    fetchUser();
+  }, []);
+
   return (
     <div className="h-[calc(100vh-52px)] w-full bg-grayblue-100 p-6 flex flex-col items-center gap-4 overflow-auto font-sans">
       {/* General Settings Title */}
@@ -78,13 +129,13 @@ export const Settings = () => {
       {/* General Settings */}
       <div className="w-full max-w-2xl">
         <div className="rounded-lg bg-white p-[14px] flex flex-col gap-3">
-          {SETTINGS_PAGE_DATA.generalSettings.map((setting, index) => (
-            <div key={setting.id}>
-              <SettingItem setting={setting as Setting} />
-              {index < SETTINGS_PAGE_DATA.generalSettings.length - 1 && (
+          {settingsData.map((setting, index) => (
+            <>
+              <SettingItem setting={setting as Setting} key={setting.id} />
+              {index < settingsData.length - 1 && (
                 <div className="h-px bg-gray-200" />
               )}
-            </div>
+            </>
           ))}
         </div>
       </div>
@@ -98,17 +149,17 @@ export const Settings = () => {
       <div className="w-full max-w-2xl">
         <div className="rounded-lg bg-white p-[14px] flex flex-col gap-3">
           {SETTINGS_PAGE_DATA.supportSettings.map((setting, index) => (
-            <div key={setting.id}>
-              <SettingItem setting={setting as Setting} />
+            <>
+              <SettingItem setting={setting as Setting} key={setting.id} />
               {index < SETTINGS_PAGE_DATA.supportSettings.length - 1 && (
                 <div className="h-px bg-gray-200" />
               )}
-            </div>
+            </>
           ))}
         </div>
       </div>
     </div>
-  )
+  );
 }
 
 export type SettingType = 'default' | 'toggle' | 'disabled' | 'copy' | 'key' | 'select' | 'link'
