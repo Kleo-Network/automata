@@ -1,27 +1,5 @@
 import { useEffect, useState } from "react"
-import crypto from 'crypto';
-
-// TODO: @vaibhav Please update this function and use it.
-const decryptKey = (encryptedKey: string, secretKey: string, iv: string): void => {
-  try {
-    // Decode the base64-encoded encrypted key, secretKey, and IV
-    const encryptedBuffer = Buffer.from(encryptedKey, 'base64');
-    const keyBuffer = Buffer.from(secretKey, 'utf-8');
-    const ivBuffer = Buffer.from(iv, 'utf-8');
-
-    // Create a decipher instance using AES-256-CBC
-    const decipher = crypto.createDecipheriv('aes-256-cbc', keyBuffer, ivBuffer);
-
-    // Decrypt the key
-    let decrypted = decipher.update(encryptedBuffer, undefined, 'utf-8');
-    decrypted += decipher.final('utf-8');
-
-    // Log the decrypted key
-    console.log('Decrypted Key:', decrypted);
-  } catch (error: any) {
-    console.error('Error during decryption:', error.message);
-  }
-};
+import { decryptPrivateKey } from '../../../../background/utils/key'
 
 const privateKeyToStarString = (key: string) => {
   if (key.length <= 2) return key; // If the key is too short, return as is
@@ -64,13 +42,13 @@ const SETTINGS_PAGE_DATA = {
     {
       id: '4',
       title: 'RPC URL',
-      description: 'https://rpc.vanamainnet.com',
+      description: 'https://rpc.islander.vana.org',
       type: 'copy'
     },
     {
       id: '5',
       title: 'Chain',
-      description: 'VANA MAINNET (Chain ID: 1234)',
+      description: 'VANA MAINNET (Chain ID: 1480)',
       type: 'default'
     }
   ],
@@ -79,9 +57,9 @@ const SETTINGS_PAGE_DATA = {
     {
       id: '1',
       title: 'Follow Kleo on X',
-      description: '@KleoAI',
+      description: '@kleo_network',
       type: 'link',
-      url: 'https://x.com/KleoAI'
+      url: 'https://x.com/kleo_network'
     },
     {
       id: '2',
@@ -103,10 +81,15 @@ export const Settings = () => {
         const result = await chrome.storage.local.get('user');
         if (result.user && result.user.encryptedPrivateKey) {
           // Update the state to reflect the updated settings
+          const encryptedData = {
+            iv: result.user.iv,
+            encryptedPrivateKey: result.user.encryptedPrivateKey,
+          }
+          const decryptedPrivateKey = await decryptPrivateKey(encryptedData, result.user.slug);
           setSettingsData((prevSettings) =>
             prevSettings.map((setting) =>
               setting.id === '2'
-                ? { ...setting, description: result.user.encryptedPrivateKey }
+                ? { ...setting, description: decryptedPrivateKey }
                 : setting
             )
           );
