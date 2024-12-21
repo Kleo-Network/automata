@@ -27,12 +27,6 @@
         "matches": ["<all_urls>"],
         "js": ["contentScript.js"]
       }
-    ],
-    "web_accessible_resources": [
-      {
-        "resources": ["contentScript.js"],
-        "matches": ["http://localhost:5173/*","https://*.kleo.network/*"]
-      }
     ]
   }
   

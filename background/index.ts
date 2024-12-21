@@ -13,6 +13,7 @@ interface ScriptProject {
   image: string;
 }
 
+
 interface ScriptAction {
   type: Action;
   params: string[];
@@ -295,3 +296,26 @@ async function initializeLLM() {
 initializeLLM()
   .then(() => console.log('LLM initialized'))
   .catch(console.error);
+
+  // background/index.ts
+
+chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
+  // 1. Only proceed if the tab is fully loaded (changeInfo.status === 'complete')
+  //    and we have a URL to inspect.
+  if (changeInfo.status === 'complete' && tab.url) {
+    // 2. A simple check to see if it's a login page (adjust logic as needed)
+    
+      // 3. Notify the content script to show the login modal
+      chrome.tabs.sendMessage(tabId, { type: 'SHOW_LOGIN_MODAL' });
+    
+  }
+});
+
+// 4. Listen for messages from the injected script
+chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  if (message.type === 'LOGIN_REDIRECT') {
+    console.log('[background] User has left the login page or logged in.');
+    // Trigger whatever logic you need here
+    // e.g., sendResponse({ success: true });
+  }
+});
