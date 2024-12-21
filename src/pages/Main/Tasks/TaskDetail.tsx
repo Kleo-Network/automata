@@ -4,6 +4,7 @@ import useFetch, { FetchStatus } from "../../../common/hooks/useFetch";
 import { parseScript } from "../../../../content/utils/parseScript";
 import { TaskCard } from "./TaskCard";
 
+// Constants
 const IMAGES = {
   successIconPath: '../../../assets/images/Tasks/greenTick.svg',
   errorIconPath: '../../../assets/images/Tasks/redCross.svg',
@@ -12,6 +13,7 @@ const IMAGES = {
   pendingIconPath: '../../../assets/images/Tasks/pendingIcon.svg'
 };
 
+// Enums & Types
 export enum STEP_STATUS {
   PENDING = 'PENDING',
   RUNNING = 'RUNNING',
@@ -56,55 +58,62 @@ interface Update {
   status: STEP_STATUS;
 }
 
+// Main Component
 export const TaskDetails = () => {
-  const { taskId } = useParams();
+  const { taskId } = useParams<{ taskId: string }>();
 
-  // All useState hooks
+  // State Management
   const [scriptStatus, setScriptStatus] = useState(STEP_STATUS.PENDING);
   const [steps, setSteps] = useState<Step[]>([]);
   const [inputValue, setInputValue] = useState('Credentials : ');
   const [port, setPort] = useState<chrome.runtime.Port | null>(null);
-  const [scriptExecutionFailed, setScriptExecutionFailed] = useState<string>('');
+  const [scriptExecutionFailed, setScriptExecutionFailed] = useState('');
 
-  // Fetch the specific script details from the API
+  // Data Fetching
   const { data, status, error } = useFetch<ScriptResponse>(`script/${taskId}`);
 
-  // useMemo hooks
-  const inputRequired = useMemo(() => parseInt(taskId || '2') % 2 === 0, [taskId]);
+  // TODO: @vaibhav Update the scriptResponse to have this field. Right now keeping it false.
+  // const inputRequired = data?.script.inputRequired;
+  const inputRequired = false;
 
-  // useEffect hooks
+  // NOTE: This is for mock data only.
+  // const inputRequired = useMemo(() =>
+  //   parseInt(taskId || '2') % 2 === 0,
+  //   [taskId]
+  // );
+
+  // Get the steps at Start
   useEffect(() => {
     if (data?.script?.script) {
-      const StepsList = parseScript(data.script.script);
-      setSteps(StepsList);
-      console.log('PARSED STEPS \n', StepsList);
+      const stepsList = parseScript(data.script.script);
+      setSteps(stepsList);
+      console.log('Parsed steps:', stepsList);
     }
   }, [data?.script?.script]);
 
-  // Listen to Execution Status changes
+  // Port Connection Management
   useEffect(() => {
-    // connect to background script
     const newPort = chrome.runtime.connect({ name: "tracking-port" });
     setPort(newPort);
-    console.log('FE: Connected To BG Script on PORT : ', newPort);
+    console.log('Connected to background script:', newPort);
 
-    // send Initial Message to BG
+    // Initialize tracking
     newPort.postMessage({
       action: 'START_TRACKING',
-      taskId: taskId
-    })
+      taskId
+    });
 
-    // Handle incoming messages
+    // Update steps based on background messages
     newPort.onMessage.addListener((update: Update) => {
-      console.log('FE: Received message from BG:', update);
+      console.log('Received update:', update);
 
       if (update.stepIndex !== undefined && update.status) {
         setSteps(prevSteps => {
           const newSteps = [...prevSteps];
-          if (newSteps[update.stepIndex!]) {
-            newSteps[update.stepIndex!] = {
-              ...newSteps[update.stepIndex!],
-              status: update.status!
+          if (newSteps[update.stepIndex]) {
+            newSteps[update.stepIndex] = {
+              ...newSteps[update.stepIndex],
+              status: update.status
             };
           }
           return newSteps;
@@ -112,62 +121,64 @@ export const TaskDetails = () => {
       }
     });
 
-    // Cleanup on unmount
     return () => {
-      console.log('Frontend: Disconnecting port');
+      console.log('Disconnecting port');
       newPort.disconnect();
     };
-  }, [taskId])
+  }, [taskId]);
 
+  // Event Handlers
   const handlePlayScript = () => {
-    if (data?.script.script) {
-      console.log('Frontend: Executing script:', data?.script.script);
-      setScriptStatus(STEP_STATUS.RUNNING);
-      chrome.runtime.sendMessage(
-        {
-          action: 'executeScript',
-          input: data.script.script
-        },
-        (response) => {
-          console.log('Frontend: Received execute script response:', response);
-          if (response?.success) {
-            setScriptStatus(STEP_STATUS.FINISHED);
-          } else {
-            setScriptStatus(STEP_STATUS.ERROR);
-            // Add error to updates
-            setScriptExecutionFailed(response?.error || 'Script Execution Failed!')
-          }
+    if (!data?.script.script) return;
+
+    console.log('Executing script:', data.script.script);
+    setScriptStatus(STEP_STATUS.RUNNING);
+
+    chrome.runtime.sendMessage(
+      {
+        action: 'executeScript',
+        input: data.script.script
+      },
+      (response) => {
+        console.log('Script execution response:', response);
+        if (response?.success) {
+          setScriptStatus(STEP_STATUS.FINISHED);
+        } else {
+          setScriptStatus(STEP_STATUS.ERROR);
+          setScriptExecutionFailed(response?.error || 'Script Execution Failed!');
         }
-      );
-    }
+      }
+    );
   };
 
-  // Render functions
-  const renderLoading = () => (
-    <div className="p-6 flex flex-col w-full h-[calc(100vh-52px)] gap-4 bg-grayblue-100">
-      <div>Loading task details...</div>
-    </div>
-  );
+  // Loading States
+  if (status === FetchStatus.LOADING) {
+    return (
+      <div className="p-6 flex flex-col w-full h-[calc(100vh-52px)] gap-4 bg-grayblue-100">
+        <div>Loading task details...</div>
+      </div>
+    );
+  }
 
-  const renderError = () => (
-    <div className="p-6 flex flex-col w-full h-[calc(100vh-52px)] gap-4 bg-grayblue-100">
-      <div className="text-red-500">Error: {error}</div>
-    </div>
-  );
+  if (status === FetchStatus.ERROR) {
+    return (
+      <div className="p-6 flex flex-col w-full h-[calc(100vh-52px)] gap-4 bg-grayblue-100">
+        <div className="text-red-500">Error: {error}</div>
+      </div>
+    );
+  }
 
-  const renderNoData = () => (
-    <div className="p-6 flex flex-col w-full h-[calc(100vh-52px)] gap-4 bg-grayblue-100">
-      <div>No data found for this task.</div>
-    </div>
-  );
-
-  // Main render logic
-  if (status === FetchStatus.LOADING) return renderLoading();
-  if (status === FetchStatus.ERROR) return renderError();
-  if (!data?.script) return renderNoData();
+  if (!data?.script) {
+    return (
+      <div className="p-6 flex flex-col w-full h-[calc(100vh-52px)] gap-4 bg-grayblue-100">
+        <div>No data found for this task.</div>
+      </div>
+    );
+  }
 
   const taskData = data.script;
 
+  // Main Render
   return (
     <div className="p-6 flex flex-col w-full h-[calc(100vh-52px)] gap-4 bg-grayblue-100">
       <TaskCard
@@ -177,9 +188,21 @@ export const TaskDetails = () => {
         rating={taskData.rating}
         script={taskData.script}
         stats={[
-          { label: 'Used', value: `${taskData.used} times`, iconSrc: "../../assets/images/tasks/profileIcon.svg" },
-          { label: 'Sponsored', value: taskData.sponsored, iconSrc: taskData.logo || 'https://example.com/default-icon.png' },
-          { label: 'Earn', value: `+${taskData.earn_points}`, iconSrc: '../../assets/images/tasks/dollarIcon.svg' },
+          {
+            label: 'Used',
+            value: `${taskData.used} times`,
+            iconSrc: "../../assets/images/tasks/profileIcon.svg"
+          },
+          {
+            label: 'Sponsored',
+            value: taskData.sponsored,
+            iconSrc: taskData.logo || 'https://example.com/default-icon.png'
+          },
+          {
+            label: 'Earn',
+            value: `+${taskData.earn_points}`,
+            iconSrc: '../../assets/images/tasks/dollarIcon.svg'
+          },
         ]}
         title={taskData.name}
         id={taskData._id}
@@ -220,19 +243,25 @@ export const TaskDetails = () => {
             key={index}
           />
         ))}
-        {scriptStatus === STEP_STATUS.ERROR &&
+        {scriptStatus === STEP_STATUS.ERROR && (
           <HistoryItem
             content={scriptExecutionFailed}
             status={STEP_STATUS.ERROR}
             key={steps.length}
-          />}
+          />
+        )}
       </div>
     </div>
   );
 };
 
-// HistoryItem component remains the same
-const HistoryItem = ({ status, content }: { status: STEP_STATUS, content: string }) => {
+// History Item Sub-component
+interface HistoryItemProps {
+  status: STEP_STATUS;
+  content: string;
+}
+
+const HistoryItem = ({ status, content }: HistoryItemProps) => {
   const getImagePath = () => {
     switch (status) {
       case STEP_STATUS.SUCCESS:
@@ -253,9 +282,7 @@ const HistoryItem = ({ status, content }: { status: STEP_STATUS, content: string
   return (
     <div className={`w-full flex gap-2 mb-3 ${status === STEP_STATUS.RUNNING ? 'bg-gray-600' : ''}`}>
       <img src={getImagePath()} alt={status} className="size-4" />
-      <p>
-        {content}
-      </p>
+      <p>{content}</p>
     </div>
   );
 };
