@@ -1,7 +1,8 @@
 // content/index.ts
 
-import { extractInnerText, fetchElementsByAttribute } from "./templatize";
-import {UserData} from '../src/common/hooks/UserContext';
+import { getPageContent } from '../content/utils/getPageContent';
+import { UserData } from '../src/common/hooks/UserContext';
+import { extractInnerText, fetchElementsByAttribute } from './templatize';
 
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   if (request.action === 'input') {
@@ -10,38 +11,44 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     performClick(request.identifierType, request.elementId, request.idName);
   } else if (request.action === 'infer') {
     performInfer(request.identifierType, request.elementId, request.attribute, request.attribValue);
+  } else if (request.action === 'getPageContent') {
+    // Use the getPageContent utility function
+    getPageContent((content: string, title: string) => {
+      sendResponse({ content, title });
+    });
   }
 });
 
 async function performInfer(identifierType: string, elementId: string, attribute: any, attribValue: any) {
-  console.log("debug");
+  console.log('debug');
   let element: HTMLElement | null = null;
   if (identifierType === 'id') {
     element = document.getElementById(elementId);
   } else if (identifierType === 'class') {
-    console.log("element id", elementId);
+    console.log('element id', elementId);
     element = document.getElementsByClassName(elementId)[0] as HTMLElement;
   } else if (identifierType === 'name') {
     element = document.querySelector(`[name="${elementId}"]`);
   }
 
-  console.log({element});
+  console.log({ element });
   if (element) {
     const data = {
       innerHTML: element.innerHTML,
-      innerText: element.innerText
+      innerText: element.innerText,
     };
 
     const result = fetchElementsByAttribute(element.innerHTML, attribute, attribValue);
-    console.log({result, element});
+    console.log({ result, element });
     const text = extractInnerText(result);
 
     chrome.runtime.sendMessage(
       {
         action: 'inferLLM',
         text: String(text),
-        prompt: "You are there to pick item from this list to buy ps5, just STRICTLY return the index from the array and nothing else."
-      }, 
+        prompt:
+          'You are there to pick item from this list to buy ps5, just STRICTLY return the index from the array and nothing else.',
+      },
       (response) => {
         if (response && response.index !== undefined && response.index !== null) {
           const index = response.index;
@@ -58,11 +65,11 @@ async function performInfer(identifierType: string, elementId: string, attribute
             console.error('Element not found at returned index');
           }
         } else if (response && response.error) {
-          console.error("Error from background inference:", response.error);
+          console.error('Error from background inference:', response.error);
         } else {
-          console.error("No valid response received from background script");
+          console.error('No valid response received from background script');
         }
-      }
+      },
     );
   } else {
     console.error('Element not found for scraping');
@@ -109,9 +116,9 @@ export function createNewUser(name: string): Promise<{ success: boolean; user?: 
   return new Promise((resolve) => {
     chrome.runtime.sendMessage({ action: 'createUser', name: name }, (response) => {
       if (chrome.runtime.lastError) {
-        console.error("Error sending message:", chrome.runtime.lastError);
+        console.error('Error sending message:', chrome.runtime.lastError);
       }
-      console.log("what's the response? line 111 index.ts", response)
+      console.log("what's the response? line 111 index.ts", response);
       if (response && response.success) {
         resolve({ success: true, user: response.user });
       } else {
@@ -121,7 +128,9 @@ export function createNewUser(name: string): Promise<{ success: boolean; user?: 
   });
 }
 
-export function restoreAccount(privateKey: string): Promise<{ success: boolean; user?: UserData; error?: string }> {
+export function restoreAccount(
+  privateKey: string,
+): Promise<{ success: boolean; user?: UserData; error?: string }> {
   return new Promise((resolve) => {
     chrome.runtime.sendMessage({ action: 'restoreAccount', privateKey: privateKey }, (response) => {
       if (response && response.success) {

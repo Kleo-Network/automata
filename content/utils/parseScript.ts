@@ -1,4 +1,4 @@
-import { Step, STEP_STATUS } from '../../src/pages/Main/Tasks/TaskDetailOLD';
+import { Step, STEP_STATUS } from '../../src/pages/Main/Tasks/TaskDetail';
 
 // Configuration for script actions and their human-readable messages
 const SCRIPT_ACTION_CONFIG = {

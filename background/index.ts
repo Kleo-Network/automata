@@ -1,3 +1,4 @@
+import { clearScriptContent, PageContent, storePageContent } from '../content/utils/contentManager';
 import LLM from './utils/llm';
 import { initializeUser, restoreAccount } from './utils/user';
 
@@ -142,6 +143,23 @@ async function executeActions(actions: ScriptAction[]): Promise<void> {
           if (tabInstance.id) {
             sendUpdate('Waiting for page to load...');
             await waitForPageLoad(tabInstance.id);
+
+            // Collect page content after load
+            if (currentTaskId) {
+              chrome.tabs.sendMessage(tabInstance.id, { action: 'getPageContent' }, async (response) => {
+                if (response?.content && response?.title) {
+                  const pageContent: PageContent = {
+                    url: tabInstance.url || '',
+                    title: response.title,
+                    content: response.content,
+                    timestamp: Date.now(),
+                  };
+                  await storePageContent(currentTaskId!, pageContent);
+                  console.log('Current TaskID : ', currentTaskId);
+                }
+              });
+            }
+
             sendUpdate('Page loaded successfully');
           }
           break;
@@ -151,7 +169,22 @@ async function executeActions(actions: ScriptAction[]): Promise<void> {
     } catch (error) {
       console.error('Background: Action execution error:', error);
       sendUpdate(`Error executing ${action.type}: ${(error as Error).message}`, i, STEP_STATUS.ERROR);
+      if (currentTaskId) {
+        // TODO: PRINCE Uncomment this.
+        // await clearScriptContent(currentTaskId!);
+      }
       throw error;
+    }
+  }
+
+  // After all actions are completed, send content to API
+  if (currentTaskId) {
+    try {
+      // TODO: PRINCE Uncomment this.
+      // await sendScriptContentToAPI(currentTaskId);
+    } catch (error) {
+      // Don't throw here to avoid failing the whole script execution
+      console.error('Failed to send script content to API:', error);
     }
   }
 
@@ -167,7 +200,10 @@ chrome.runtime.onConnect.addListener((connectingPort) => {
     port.onDisconnect.addListener(() => {
       console.log('Background: Port disconnected');
       port = null;
-      currentTaskId = null;
+      if (currentTaskId) {
+        clearScriptContent(currentTaskId).catch(console.error);
+        currentTaskId = null;
+      }
     });
 
     port.onMessage.addListener((msg) => {
@@ -181,6 +217,7 @@ chrome.runtime.onConnect.addListener((connectingPort) => {
   }
 });
 
+// Message Listeners
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   console.log('listener running from background.ts');
 
@@ -225,6 +262,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         }
       } catch (error) {
         console.error('Background: Script execution error:', error);
+        // await clearScriptContent(currentTaskId || '');
         sendResponse({ success: false, error: (error as Error).message });
       }
     })();
@@ -243,6 +281,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     })();
     return true;
   }
+
   return true;
 });
 
