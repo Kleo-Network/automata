@@ -49,6 +49,13 @@ type ScriptResponse = {
   script: ScriptData;
 }
 
+interface Update {
+  timestamp: number;
+  message: string;
+  stepIndex: number;
+  status: STEP_STATUS;
+}
+
 export const TaskDetails = () => {
   const { taskId } = useParams();
 
@@ -56,8 +63,10 @@ export const TaskDetails = () => {
   const [scriptStatus, setScriptStatus] = useState(STEP_STATUS.PENDING);
   const [steps, setSteps] = useState<Step[]>([]);
   const [inputValue, setInputValue] = useState('Credentials : ');
+  const [port, setPort] = useState<chrome.runtime.Port | null>(null);
+  const [scriptExecutionFailed, setScriptExecutionFailed] = useState<string>('');
 
-  // Fetch hook
+  // Fetch the specific script details from the API
   const { data, status, error } = useFetch<ScriptResponse>(`script/${taskId}`);
 
   // useMemo hooks
@@ -72,8 +81,65 @@ export const TaskDetails = () => {
     }
   }, [data?.script?.script]);
 
+  // Listen to Execution Status changes
+  useEffect(() => {
+    // connect to background script
+    const newPort = chrome.runtime.connect({ name: "tracking-port" });
+    setPort(newPort);
+    console.log('FE: Connected To BG Script on PORT : ', newPort);
+
+    // send Initial Message to BG
+    newPort.postMessage({
+      action: 'START_TRACKING',
+      taskId: taskId
+    })
+
+    // Handle incoming messages
+    newPort.onMessage.addListener((update: Update) => {
+      console.log('FE: Received message from BG:', update);
+
+      if (update.stepIndex !== undefined && update.status) {
+        setSteps(prevSteps => {
+          const newSteps = [...prevSteps];
+          if (newSteps[update.stepIndex!]) {
+            newSteps[update.stepIndex!] = {
+              ...newSteps[update.stepIndex!],
+              status: update.status!
+            };
+          }
+          return newSteps;
+        });
+      }
+    });
+
+    // Cleanup on unmount
+    return () => {
+      console.log('Frontend: Disconnecting port');
+      newPort.disconnect();
+    };
+  }, [taskId])
+
   const handlePlayScript = () => {
-    console.log('Play Script: ', data?.script?.script);
+    if (data?.script.script) {
+      console.log('Frontend: Executing script:', data?.script.script);
+      setScriptStatus(STEP_STATUS.RUNNING);
+      chrome.runtime.sendMessage(
+        {
+          action: 'executeScript',
+          input: data.script.script
+        },
+        (response) => {
+          console.log('Frontend: Received execute script response:', response);
+          if (response?.success) {
+            setScriptStatus(STEP_STATUS.FINISHED);
+          } else {
+            setScriptStatus(STEP_STATUS.ERROR);
+            // Add error to updates
+            setScriptExecutionFailed(response?.error || 'Script Execution Failed!')
+          }
+        }
+      );
+    }
   };
 
   // Render functions
@@ -154,6 +220,12 @@ export const TaskDetails = () => {
             key={index}
           />
         ))}
+        {scriptStatus === STEP_STATUS.ERROR &&
+          <HistoryItem
+            content={scriptExecutionFailed}
+            status={STEP_STATUS.ERROR}
+            key={steps.length}
+          />}
       </div>
     </div>
   );
