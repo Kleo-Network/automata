@@ -13,9 +13,9 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   if (request.action === 'input') {
     performInput(request.identifierType, request.elementId, request.text);
   } else if (request.action === 'click') {
-    performClick(request.identifierType, request.elementId, request.idName);
+    performClick(request.identifierType);
   } else if (request.action === 'infer') {
-    performInfer(request.identifierType, request.elementId, request.attribute, request.attribValue);
+    performInfer(request.identifierType);
   } else if (request.action === 'getPageContent') {
     // Use the getPageContent utility function
     getPageContent((content: string, title: string) => {
@@ -24,61 +24,42 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   }
 });
 
-async function performInfer(identifierType: string, elementId: string, attribute: any, attribValue: any) {
+
+// click#(infer#...queryselector#prompt)
+// input#(query selector)#(infer#...queryselector#prompt)
+// form#(query selector)#(infer#...queryselector#prompt)
+// while#conditionA#inequality#conditionB{actionToPerformRepeatedly}
+// play and pause functionality
+// resume when login screen 
+
+
+/*
+TODO:
+1. Create function performInfer which returns LLM response should work 
+with kleo fastapi backend. ---> Vaibhav
+2. change to queryselector from #id or #class params  ---> Vaibhav
+3. create a function for form and ensure that it works with help of LLM.  ---> Vaibhav
+4. select form option and submit that event. ---> Prince
+5. While loop must work specifically for pagination and next pages. ---> Prince
+6. Login screen should work as expected ---> Prince. 
+
+*/
+async function performInfer(querySelector: string, prompt: string) {
   console.log('debug');
   let element: HTMLElement | null = null;
-  if (identifierType === 'id') {
-    element = document.getElementById(elementId);
-  } else if (identifierType === 'class') {
-    console.log('element id', elementId);
-    element = document.getElementsByClassName(elementId)[0] as HTMLElement;
-  } else if (identifierType === 'name') {
-    element = document.querySelector(`[name="${elementId}"]`);
-  }
 
-  console.log({ element });
-  if (element) {
-    const data = {
-      innerHTML: element.innerHTML,
-      innerText: element.innerText,
-    };
+  element = document.querySelector(querySelector);
 
-    const result = fetchElementsByAttribute(element.innerHTML, attribute, attribValue);
-    console.log({ result, element });
-    const text = extractInnerText(result);
 
     chrome.runtime.sendMessage(
       {
         action: 'inferLLM',
         text: String(text),
-        prompt:
-          'You are there to pick item from this list to buy ps5, just STRICTLY return the index from the array and nothing else.',
-      },
+        prompt: prompt + "\n\n\n" + element },
       (response) => {
-        if (response && response.index !== undefined && response.index !== null) {
-          const index = response.index;
-          const targetElements = element.querySelectorAll(`[${attribute}="${attribValue}"]`);
-          if (targetElements.length > index) {
-            const targetElement = targetElements[index];
-            const productUrl = targetElement.querySelector('a')?.href;
-            if (productUrl) {
-              window.location.href = productUrl;
-            } else {
-              console.error('Product URL not found');
-            }
-          } else {
-            console.error('Element not found at returned index');
-          }
-        } else if (response && response.error) {
-          console.error('Error from background inference:', response.error);
-        } else {
-          console.error('No valid response received from background script');
-        }
+        // 
       },
     );
-  } else {
-    console.error('Element not found for scraping');
-  }
 }
 
 function performInput(identifierType: string, elementId: string, text: string) {
@@ -99,15 +80,10 @@ function performInput(identifierType: string, elementId: string, text: string) {
   }
 }
 
-function performClick(identifierType: string, elementId: string, idName: string) {
+function performClick(querySelector: string) {
   let element: HTMLElement | null = null;
-  if (identifierType === 'id') {
-    element = document.getElementById(elementId);
-  } else if (identifierType === 'class') {
-    element = document.querySelector(`.${elementId}`);
-  } else if (identifierType === 'name') {
-    element = document.querySelector(`[${elementId}="${idName}"]`);
-  }
+  
+  element = document.querySelector(querySelector);
 
   if (element) {
     element.click();
@@ -147,66 +123,4 @@ export function restoreAccount(
   });
 }
 
-chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-  console.log("message",message);
-  if (message.type === 'SHOW_LOGIN_MODAL') {
-      alert("hello world, page loaded!")
-      showLoginModal();
-  }
-});
 
-// Create a simple modal to prompt the user for credentials
-function showLoginModal() {
-  // 1. Create the modal container
-  const modal = document.createElement('div');
-  modal.style.position = 'fixed';
-  modal.style.bottom = '0';
-  modal.style.left = '0';
-  modal.style.width = '100%';
-  modal.style.backgroundColor = '#f9f9f9';
-  modal.style.borderTop = '1px solid #ccc';
-  modal.style.padding = '20px';
-  modal.style.zIndex = '999999'; // ensure it stays on top
-
-  // 2. Create the form
-  const form = document.createElement('form');
-  form.innerHTML = `
-    <label for="username">Username: </label>
-    <input type="text" id="username" name="username" required />
-    
-    <label for="password"> Password: </label>
-    <input type="password" id="password" name="password" required />
-    
-    <button type="submit">Login</button>
-  `;
-
-  // 3. Handle form submission
-  form.addEventListener('submit', (event) => {
-    event.preventDefault();
-    // In a real scenario, you'd probably do some XHR/fetch to log the user in
-    // or rely on the page's own login logic. For demonstration:
-
-    // Option A: Let the real page handle the login (by removing event.preventDefault())
-    // Option B: Do something custom here before letting the user proceed
-
-    // For now, just simulate a redirect or let the real login proceed
-    console.log('Attempting login...');
-    // If the page is going to redirect to a different URL after successful login,
-    // we can rely on window.location changes or form submission.
-    simulateRedirectOrWaitForRedirect();
-  });
-
-  // 4. Append form to modal, and modal to body
-  modal.appendChild(form);
-  document.body.appendChild(modal);
-}
-
-function simulateRedirectOrWaitForRedirect() {
- 
-  setTimeout(() => {
-   
-    chrome.runtime.sendMessage({ type: 'LOGIN_REDIRECT' });
-    
-    window.location.href = 'https://example.com/after-login';
-  }, 2000);
-}

@@ -95,6 +95,8 @@ async function executeActions(actions: ScriptAction[]): Promise<void> {
       sendUpdate(`Executing action: ${action.type}`, i, STEP_STATUS.RUNNING);
 
       switch (action.type) {
+        // case 'open' 
+        // case 'login' 
         case 'new-tab':
           console.log('Background: Opening new tab:', action.params[0]);
           tabInstance = await chrome.tabs.create({ url: action.params[0] });
