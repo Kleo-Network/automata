@@ -1,10 +1,10 @@
 import { clearScriptContent, PageContent, storePageContent } from '../content/utils/contentManager';
-import {askAi} from './utils/llm';
+import { askAi } from './utils/llm';
 import { initializeUser, restoreAccount } from './utils/user';
 
 // Types and Interfaces
 // TODO: Write a function for user to get private key from wallet.
-type Action = 'new-tab' | 'input' | 'click' | 'infer' | 'wait';
+type Action = 'new-tab' | 'input' | 'click' | 'infer' | 'wait' | 'select';
 
 interface ScriptProject {
   projectScript: string;
@@ -12,7 +12,6 @@ interface ScriptProject {
   projectDescription: string;
   image: string;
 }
-
 
 interface ScriptAction {
   type: Action;
@@ -40,7 +39,6 @@ enum STEP_STATUS {
 let port: chrome.runtime.Port | null = null;
 let currentTaskId: string | null = null;
 
-
 // Helper Functions
 function sendUpdate(message: string, stepIndex?: number, status?: STEP_STATUS): void {
   if (port) {
@@ -53,7 +51,6 @@ function sendUpdate(message: string, stepIndex?: number, status?: STEP_STATUS): 
     port.postMessage(update);
   }
 }
-
 
 function parseScript(script: string): ScriptAction[] {
   return script
@@ -81,8 +78,6 @@ function parseScript(script: string): ScriptAction[] {
       };
     });
 }
-
-
 
 /**
  * Splits a string by a delimiter only if that delimiter
@@ -119,7 +114,6 @@ function splitOutsideQuotes(line: string, delimiter: string): string[] {
   return results;
 }
 
-
 function waitForPageLoad(workTabId: number): Promise<void> {
   return new Promise<void>((resolve) => {
     chrome.tabs.onUpdated.addListener(function listener(tabId, info) {
@@ -151,10 +145,10 @@ async function executeActions(actions: ScriptAction[]): Promise<void> {
       sendUpdate(`Executing action: ${action.type}`, i, STEP_STATUS.RUNNING);
 
       switch (action.type) {
-
         case 'new-tab':
           console.log('Background: Opening new tab:', action.params[0]);
           tabInstance = await chrome.tabs.create({ url: action.params[0] });
+          console.log('PRINCE new tab ID : ', tabInstance.id);
           sendUpdate(`Opened new tab: ${action.params[0]}`);
           break;
 
@@ -164,9 +158,20 @@ async function executeActions(actions: ScriptAction[]): Promise<void> {
             chrome.tabs.sendMessage(tabInstance.id, {
               action: 'input',
               queryselector: action.params[0],
-              text: action.params[1]
+              text: action.params[1],
             });
             sendUpdate(`Input entered: ${action.params[1]}`);
+          }
+          break;
+
+        case 'select':
+          if (tabInstance.id) {
+            console.log('PRINCE : sending select event ', action);
+            chrome.tabs.sendMessage(tabInstance.id, {
+              action: 'select',
+              filterQuerySelector: action.params[0],
+              filterValue: action.params[1],
+            });
           }
           break;
 
@@ -175,7 +180,7 @@ async function executeActions(actions: ScriptAction[]): Promise<void> {
           if (tabInstance.id) {
             chrome.tabs.sendMessage(tabInstance.id, {
               action: 'click',
-              queryselector: action.params[0]
+              queryselector: action.params[0],
             });
           }
           break;
@@ -186,7 +191,7 @@ async function executeActions(actions: ScriptAction[]): Promise<void> {
             chrome.tabs.sendMessage(tabInstance.id, {
               action: 'infer',
               queryselector: action.params[0],
-              text: action.params[1]
+              text: action.params[1],
             });
           }
           break;
@@ -306,6 +311,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         if (content) {
           console.log('Background: Parsing script:', content);
           const actions = parseScript(content);
+          console.log('BG actions after parsing : ', actions);
           await executeActions(actions);
           console.log('Background: Script execution completed');
           sendResponse({ success: true });
@@ -340,5 +346,3 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 
 // Initialize
 chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: true }).catch((error) => console.error(error));
-
-
