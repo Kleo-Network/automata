@@ -1,5 +1,5 @@
 import { clearScriptContent, PageContent, storePageContent } from '../content/utils/contentManager';
-import { askAi } from './utils/llm';
+import {askAi} from './utils/llm';
 import { initializeUser, restoreAccount } from './utils/user';
 
 // Types and Interfaces
@@ -12,6 +12,7 @@ interface ScriptProject {
   projectDescription: string;
   image: string;
 }
+
 
 interface ScriptAction {
   type: Action;
@@ -39,6 +40,7 @@ enum STEP_STATUS {
 let port: chrome.runtime.Port | null = null;
 let currentTaskId: string | null = null;
 
+
 // Helper Functions
 function sendUpdate(message: string, stepIndex?: number, status?: STEP_STATUS): void {
   if (port) {
@@ -52,13 +54,14 @@ function sendUpdate(message: string, stepIndex?: number, status?: STEP_STATUS): 
   }
 }
 
+
 function parseScript(script: string): ScriptAction[] {
   return script
     .split('\n')
     .filter((line) => line.trim() !== '')
     .map((line) => {
       // 1) Split the line on '#' (outside of quotes)
-      const parts = splitOutsideQuotes(line, '$D$');
+      const parts = splitOutsideQuotes(line, '#');
 
       // 2) For each segment, remove leading & trailing double quotes
       const sanitizedParts = parts.map((part) => {
@@ -78,6 +81,8 @@ function parseScript(script: string): ScriptAction[] {
       };
     });
 }
+
+
 
 /**
  * Splits a string by a delimiter only if that delimiter
@@ -114,6 +119,7 @@ function splitOutsideQuotes(line: string, delimiter: string): string[] {
   return results;
 }
 
+
 function waitForPageLoad(workTabId: number): Promise<void> {
   return new Promise<void>((resolve) => {
     chrome.tabs.onUpdated.addListener(function listener(tabId, info) {
@@ -145,6 +151,7 @@ async function executeActions(actions: ScriptAction[]): Promise<void> {
       sendUpdate(`Executing action: ${action.type}`, i, STEP_STATUS.RUNNING);
 
       switch (action.type) {
+
         case 'new-tab':
           console.log('Background: Opening new tab:', action.params[0]);
           tabInstance = await chrome.tabs.create({ url: action.params[0] });
@@ -157,7 +164,7 @@ async function executeActions(actions: ScriptAction[]): Promise<void> {
             chrome.tabs.sendMessage(tabInstance.id, {
               action: 'input',
               queryselector: action.params[0],
-              text: action.params[1],
+              text: action.params[1]
             });
             sendUpdate(`Input entered: ${action.params[1]}`);
           }
@@ -168,7 +175,7 @@ async function executeActions(actions: ScriptAction[]): Promise<void> {
           if (tabInstance.id) {
             chrome.tabs.sendMessage(tabInstance.id, {
               action: 'click',
-              queryselector: action.params[0],
+              queryselector: action.params[0]
             });
           }
           break;
@@ -179,7 +186,7 @@ async function executeActions(actions: ScriptAction[]): Promise<void> {
             chrome.tabs.sendMessage(tabInstance.id, {
               action: 'infer',
               queryselector: action.params[0],
-              text: action.params[1],
+              text: action.params[1]
             });
           }
           break;
@@ -333,3 +340,5 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 
 // Initialize
 chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: true }).catch((error) => console.error(error));
+
+

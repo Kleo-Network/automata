@@ -178,13 +178,6 @@ export const TaskDetails = () => {
 
   const taskData = data.script;
 
-  // TODO: PRINCE remove this mock script one done with login flow.
-  data!.script.script = `
-new-tab$D$https://www.amazon.in/gp/css/order-history?ref_=nav_orders_first
-wait
-select$D$#time-filter$D$INFER$D$You will get this element, document.querySelector('#time-filter'). Now from this you need to identify the querySelector for 2024 option. And return a single string of choosing 2024 year. By assigning that string returned by you to this select element, and then if I dispatch the change event, it should be able to choose that 2024 in this select. For example you can return value for that option which is asked from the select you have been shared. Just return the value as string. For example 'year-2023' if it is available as option. Now here is the whole select element :
-`
-
   // Main Render
   return (
     <div className="p-6 flex flex-col w-full h-[calc(100vh-52px)] gap-4 bg-grayblue-100">

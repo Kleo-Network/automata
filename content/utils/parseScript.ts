@@ -24,7 +24,7 @@ export const parseScript = (script: string): Step[] => {
     .split('\n')
     .filter((line) => line.trim() !== '')
     .map((line, index) => {
-      const [action, ...params] = line.split('$D$');
+      const [action, ...params] = line.split('#');
       const config = SCRIPT_ACTION_CONFIG[action as keyof typeof SCRIPT_ACTION_CONFIG];
 
       return {
