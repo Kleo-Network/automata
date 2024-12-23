@@ -54,15 +54,71 @@ function sendUpdate(message: string, stepIndex?: number, status?: STEP_STATUS): 
   }
 }
 
+
 function parseScript(script: string): ScriptAction[] {
   return script
     .split('\n')
     .filter((line) => line.trim() !== '')
     .map((line) => {
-      const [type, ...params] = line.split('#');
-      return { type: type as Action, params };
+      // 1) Split the line on '#' (outside of quotes)
+      const parts = splitOutsideQuotes(line, '#');
+
+      // 2) For each segment, remove leading & trailing double quotes
+      const sanitizedParts = parts.map((part) => {
+        // Remove leading/trailing quotes only if the part starts and ends with a quote
+        if (part.startsWith('"') && part.endsWith('"')) {
+          return part.slice(1, -1);
+        }
+        return part;
+      });
+
+      // 3) The first segment is the action type, the rest are params
+      const [type, ...params] = sanitizedParts;
+
+      return {
+        type: type as Action,
+        params, // The rest of the segments are your parameters
+      };
     });
 }
+
+
+
+/**
+ * Splits a string by a delimiter only if that delimiter
+ * is not within double quotes.
+ * Example:
+ *   splitOutsideQuotes('abc#def', '#') -> ['abc', 'def']
+ *   splitOutsideQuotes('abc"#"def', '#') -> ['abc"#"def']
+ */
+function splitOutsideQuotes(line: string, delimiter: string): string[] {
+  const results: string[] = [];
+  let currentSegment = '';
+  let inQuotes = false;
+
+  for (let i = 0; i < line.length; i++) {
+    const char = line[i];
+
+    if (char === '"') {
+      // Flip the inQuotes state whenever we encounter a double quote
+      inQuotes = !inQuotes;
+      currentSegment += char;
+    } else if (char === delimiter && !inQuotes) {
+      // If we're NOT inside quotes and we see the delimiter, split here
+      results.push(currentSegment);
+      currentSegment = '';
+    } else {
+      // Otherwise, just accumulate the character
+      currentSegment += char;
+    }
+  }
+
+  // Push the last segment
+  results.push(currentSegment);
+
+  return results;
+}
+
 
 function waitForPageLoad(workTabId: number): Promise<void> {
   return new Promise<void>((resolve) => {
@@ -107,11 +163,10 @@ async function executeActions(actions: ScriptAction[]): Promise<void> {
           if (tabInstance.id) {
             chrome.tabs.sendMessage(tabInstance.id, {
               action: 'input',
-              identifierType: action.params[0],
-              elementId: action.params[1],
-              text: action.params[2],
+              queryselector: action.params[0],
+              text: action.params[1]
             });
-            sendUpdate(`Input entered: ${action.params[2]}`);
+            sendUpdate(`Input entered: ${action.params[1]}`);
           }
           break;
 
@@ -120,9 +175,7 @@ async function executeActions(actions: ScriptAction[]): Promise<void> {
           if (tabInstance.id) {
             chrome.tabs.sendMessage(tabInstance.id, {
               action: 'click',
-              identifierType: action.params[0],
-              elementId: action.params[1],
-              idName: action.params[2],
+              queryselector: action.params[0]
             });
           }
           break;
@@ -132,10 +185,8 @@ async function executeActions(actions: ScriptAction[]): Promise<void> {
           if (tabInstance.id) {
             chrome.tabs.sendMessage(tabInstance.id, {
               action: 'infer',
-              identifierType: action.params[0],
-              elementId: action.params[1],
-              attribute: action.params[2],
-              attribValue: action.params[3],
+              queryselector: action.params[0],
+              text: action.params[1]
             });
           }
           break;
