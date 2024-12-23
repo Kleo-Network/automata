@@ -4,7 +4,7 @@ import { initializeUser, restoreAccount } from './utils/user';
 
 // Types and Interfaces
 // TODO: Write a function for user to get private key from wallet.
-type Action = 'new-tab' | 'input' | 'click' | 'infer' | 'wait' | 'select';
+type Action = 'new-tab' | 'input' | 'click' | 'infer' | 'wait' | 'select' | 'while';
 
 interface ScriptProject {
   projectScript: string;
@@ -55,7 +55,7 @@ function sendUpdate(message: string, stepIndex?: number, status?: STEP_STATUS): 
 function parseScript(script: string): ScriptAction[] {
   return script
     .split('\n')
-    .filter((line) => line.trim() !== '')
+    .filter((line) => line.trim() !== '') // Filter out empty lines
     .map((line) => {
       // 1) Split the line on '#' (outside of quotes)
       const parts = splitOutsideQuotes(line, '#');
@@ -69,8 +69,26 @@ function parseScript(script: string): ScriptAction[] {
         return part;
       });
 
-      // 3) The first segment is the action type, the rest are params
-      const [type, ...params] = sanitizedParts;
+      // Special handling for "while" loop
+      if (line.startsWith('while')) {
+        // Sanitize all parts by replacing \" with "
+        const sanitizedPartsForWhile = sanitizedParts.map((part) => part.replace(/\\"/g, '"'));
+
+        // Extract condition parts (ensure we clean them)
+        const [_, conditionA, inequality, conditionB] = sanitizedPartsForWhile;
+
+        // Extract the content inside { } for actions
+        const actionContent = line.substring(line.indexOf('{') + 1, line.lastIndexOf('}')).trim();
+
+        // Recursively parse nested actions with incremented depth
+        return {
+          type: 'while',
+          params: [conditionA, inequality, conditionB, actionContent],
+        };
+      }
+
+      // 3) For other actions, sanitize the parameters
+      const [type, ...params] = sanitizedParts.map((param) => param.replace(/\\"/g, '"'));
 
       return {
         type: type as Action,
@@ -135,9 +153,7 @@ async function fetchScript(cidr: string): Promise<string> {
 }
 
 // Main Execution Functions
-async function executeActions(actions: ScriptAction[]): Promise<void> {
-  let tabInstance = (await chrome.tabs.query({ active: true, currentWindow: true }))[0];
-
+async function executeActions(actions: ScriptAction[], tabInstance: chrome.tabs.Tab | null): Promise<void> {
   for (let i = 0; i < actions.length; i++) {
     const action = actions[i];
 
@@ -154,7 +170,7 @@ async function executeActions(actions: ScriptAction[]): Promise<void> {
 
         case 'input':
           console.log('Background: Sending input action:', action);
-          if (tabInstance.id) {
+          if (tabInstance && tabInstance.id) {
             chrome.tabs.sendMessage(tabInstance.id, {
               action: 'input',
               queryselector: action.params[0],
@@ -165,7 +181,7 @@ async function executeActions(actions: ScriptAction[]): Promise<void> {
           break;
 
         case 'select':
-          if (tabInstance.id) {
+          if (tabInstance && tabInstance.id) {
             console.log('PRINCE : sending select event ', action);
             chrome.tabs.sendMessage(tabInstance.id, {
               action: 'select',
@@ -175,9 +191,115 @@ async function executeActions(actions: ScriptAction[]): Promise<void> {
           }
           break;
 
+        case 'while':
+          const [conditionA, inequality, conditionB, actionContent] = action.params;
+          console.log('Executing while loop:', { conditionA, inequality, conditionB, actionContent });
+
+          let conditionEvaluation = false;
+          let maxIterations = 10; // Safeguard to avoid infinite loop
+
+          if (tabInstance && tabInstance.id) {
+            // Use await to wait for the response from the content script
+            conditionEvaluation = await new Promise((resolve) => {
+              chrome.tabs.sendMessage(
+                tabInstance!.id!,
+                {
+                  action: 'evaluateConditionDOM',
+                  conditionA,
+                  inequality,
+                  conditionB,
+                },
+                (response) => {
+                  if (chrome.runtime.lastError) {
+                    console.error(
+                      'PRINCE: Error sending message to content script:',
+                      chrome.runtime.lastError.message,
+                    );
+                    resolve(false); // Assume condition is false if the content script is unavailable
+                    return;
+                  }
+
+                  if (response && response.result !== undefined) {
+                    console.log('PRINCE reevaluating condition: ', response.result);
+                    resolve(response.result); // Use the evaluation result
+                  } else {
+                    console.error('PRINCE: Invalid response from content script:', response);
+                    resolve(false); // Assume condition is false if response is invalid
+                  }
+                },
+              );
+            });
+          }
+
+          while (conditionEvaluation && maxIterations > 0) {
+            const repeatedActions = parseScript(actionContent);
+            console.log('PRINCE : repeating these actions: ', repeatedActions);
+            await executeActions(repeatedActions, tabInstance); // Pass the tabInstance into the recursive call
+
+            // Wait for a short delay before re-evaluating the condition to give DOM time to update
+            // await new Promise((resolve) => setTimeout(resolve, 2500)); // 500ms delay
+            await waitForPageLoad(tabInstance!.id!);
+            if (currentTaskId) {
+              chrome.tabs.sendMessage(tabInstance!.id!, { action: 'getPageContent' }, async (response) => {
+                if (response?.content && response?.title) {
+                  const pageContent: PageContent = {
+                    url: tabInstance!.url || '',
+                    title: response.title,
+                    content: response.content,
+                    timestamp: Date.now(),
+                  };
+                  await storePageContent(currentTaskId!, pageContent);
+                  console.log('Current TaskID : ', currentTaskId);
+                }
+              });
+            }
+
+            // Reevaluate the condition after executing actions
+            conditionEvaluation = await new Promise((resolve) => {
+              chrome.tabs.sendMessage(
+                tabInstance!.id!,
+                {
+                  action: 'evaluateConditionDOM',
+                  conditionA,
+                  inequality,
+                  conditionB,
+                },
+                (response) => {
+                  if (chrome.runtime.lastError) {
+                    console.error(
+                      'PRINCE: Error sending message to content script:',
+                      chrome.runtime.lastError.message,
+                    );
+                    resolve(false); // Assume condition is false if the content script is unavailable
+                    return;
+                  }
+
+                  if (response && response.result !== undefined) {
+                    console.log('PRINCE reevaluating condition: ', response.result);
+                    resolve(response.result); // Use the evaluation result
+                  } else {
+                    console.error('PRINCE: Invalid response from content script:', response);
+                    resolve(false); // Assume condition is false if response is invalid
+                  }
+                },
+              );
+            });
+
+            maxIterations -= 1; // Decrease iterations to avoid infinite loop
+            console.log('PRINCE : Execution done.', maxIterations, conditionEvaluation);
+          }
+          console.log('PRINCE: Out of while loop.', maxIterations);
+
+          if (maxIterations <= 0) {
+            console.warn('PRINCE: Exceeded maximum number of iterations for while loop.');
+          } else {
+            sendUpdate(`Completed while loop`, i, STEP_STATUS.SUCCESS);
+          }
+          break;
+
         case 'click':
           console.log({ action });
-          if (tabInstance.id) {
+          if (tabInstance && tabInstance.id) {
             chrome.tabs.sendMessage(tabInstance.id, {
               action: 'click',
               queryselector: action.params[0],
@@ -187,7 +309,7 @@ async function executeActions(actions: ScriptAction[]): Promise<void> {
 
         case 'infer':
           console.log({ action });
-          if (tabInstance.id) {
+          if (tabInstance && tabInstance.id) {
             chrome.tabs.sendMessage(tabInstance.id, {
               action: 'infer',
               queryselector: action.params[0],
@@ -198,7 +320,7 @@ async function executeActions(actions: ScriptAction[]): Promise<void> {
 
         case 'wait':
           console.log('Background: Waiting for page load');
-          if (tabInstance.id) {
+          if (tabInstance && tabInstance.id) {
             sendUpdate('Waiting for page to load...');
             await waitForPageLoad(tabInstance.id);
 
@@ -207,7 +329,7 @@ async function executeActions(actions: ScriptAction[]): Promise<void> {
               chrome.tabs.sendMessage(tabInstance.id, { action: 'getPageContent' }, async (response) => {
                 if (response?.content && response?.title) {
                   const pageContent: PageContent = {
-                    url: tabInstance.url || '',
+                    url: tabInstance!.url || '',
                     title: response.title,
                     content: response.content,
                     timestamp: Date.now(),
@@ -312,7 +434,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
           console.log('Background: Parsing script:', content);
           const actions = parseScript(content);
           console.log('BG actions after parsing : ', actions);
-          await executeActions(actions);
+          await executeActions(actions, null);
           console.log('Background: Script execution completed');
           sendResponse({ success: true });
         } else {

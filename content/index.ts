@@ -8,6 +8,8 @@ interface ExtensionIdEventDetail {
 }
 
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+  console.log('PRINCE type : ', request.action);
+
   if (request.action == 'infer') {
     performInfer(request.queryselector, request.prompt);
   }
@@ -22,6 +24,11 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     });
   } else if (request.action === 'select') {
     performSelect(request.filterQuerySelector, request.filterValue);
+  } else if (request.action === 'evaluateConditionDOM') {
+    console.log('PRINCE: Inside evaluation : ', request.conditionA, request.inequality, request.conditionB);
+    const result = evaluateCondition(request.conditionA, request.inequality, request.conditionB);
+    // Send the result back to the background script
+    sendResponse({ result });
   }
 });
 
@@ -84,12 +91,11 @@ function performClick(querySelector: string) {
   let element: HTMLElement | null = null;
 
   element = document.querySelector(querySelector);
-
   if (element) {
     element.click();
     console.log('Clicked element:', element);
   } else {
-    console.error('Element not found for clicking');
+    console.error('Element not found for clicking:', querySelector);
   }
 }
 
@@ -136,4 +142,65 @@ export function restoreAccount(
       }
     });
   });
+}
+
+export function evaluateCondition(conditionA: string, inequality: string, conditionB: string): boolean {
+  const a = resolveConditionValue(conditionA);
+  const b = conditionB;
+
+  console.log('PRINCE a and b = ', a, ' and ', b);
+
+  if (!a || !b) {
+    console.log('PRINCE one or both condition values are undefined');
+    return false;
+  }
+
+  let result = false;
+
+  switch (inequality) {
+    case '==':
+      result = a == b;
+      break;
+    case '!=':
+      result = a != b;
+      break;
+    case '<':
+      result = a < b;
+      break;
+    case '>':
+      result = a > b;
+      break;
+    case '<=':
+      result = a <= b;
+      break;
+    case '>=':
+      result = a >= b;
+      break;
+    default:
+      result = false;
+      break;
+  }
+  console.log('PRINCE Results of evaluation : ', result);
+  return result;
+}
+
+export function resolveConditionValue(condition: string): any {
+  if (condition.startsWith('"') && condition.endsWith('"')) {
+    return condition.slice(1, -1); // Strip quotes for literal strings
+  }
+
+  // Assume it's a query selector for DOM value
+  const element = document.querySelector(condition);
+  if (!element) return null;
+
+  if (element.classList) {
+    console.log('PRINCE classlist for condition : ', condition, ' is : ', Array.from(element.classList).join(' '));
+    return Array.from(element.classList).join(' ');
+  }
+
+  if (element instanceof HTMLInputElement || element instanceof HTMLTextAreaElement) {
+    return element.value;
+  }
+
+  return element.textContent || '';
 }
