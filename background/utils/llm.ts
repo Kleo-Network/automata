@@ -1,69 +1,36 @@
-import axios from "axios";
+import { apiRequest } from "./api";
+
+const DEFAULT_MODEL = "gpt-4o";
 
 // Define the LLM class
-class LLM {
-  private endpoint: string;
-  private apiKey: string;
-
-  constructor() {
-    this.endpoint = '';
-    this.apiKey = '';
-  }
-
-  async initialize() {
-    const result = await chrome.storage.local.get(['url', 'apiKey']);
-    const endpoint = result.url;
-    const apiKey = result.apiKey;
-    if (!endpoint || !apiKey) {
-      throw new Error("Environment variables 'url' and 'apiKey' must be set.");
-    }
-    this.endpoint = endpoint;
-    this.apiKey = apiKey;
-  }
-
-  /**
-   * Sends a request to the LLM with custom input and a prompt.
-   * @param input - The input string for the LLM.
-   * @param prompt - The custom prompt string.
-   * @returns A promise that resolves to the LLM's output.
-   */
-  async sendRequest(input: string, prompt: string): Promise<number> {
-    const requestBody = {
-      messages: [
-        { role: "system", content: prompt },
-        { role: "user", content: input }
-      ],
-      temperature: 0.7,
-      max_tokens: 500
-    };
-
-    try {
-      const response = await axios.post(
-        this.endpoint,
-        requestBody,
-        {
-          headers: {
-            "Content-Type": "application/json",
-            "api-key": `${this.apiKey}`
-          }
-        }
-      );
-      return Number(response.data.choices[0].message.content.trim());
-    } catch (error) {
-      if (axios.isAxiosError(error)) {
-        throw new Error(`Axios error: ${error.message}`);
-      }
-      throw new Error(`Unexpected error: ${(error as Error).message}`);
-    }
-  }
+export async function askAi(prompt: string, model = DEFAULT_MODEL): Promise<string> {
+  // Prepare the payload that your /ask endpoint expects
+  const payload = {
+    prompt,
+    model,
+  };
+  
+  // Use the apiRequest helper to call your /ask endpoint
+  // NOTE: The second argument is the path (relative to your baseUrl), e.g. "ask"
+  // If your FastAPI server is set to `/api/v1/ask`, then use that route.
+  const response = await apiRequest<any>("POST", "llm/ask", payload);
+  
+  // The API returns: { "response": "assistant's reply" }
+  return response.response;
 }
-
-// Export the class for use in other files
-export default LLM;
-
-// Test function to validate the LLM interaction
 
 
 // Uncomment the line below to test the function
-//testLLM();
+
+// (async function testAsking() {
+//   try {
+//     const input = "2 + 2";
+//     const prompt = "You are a math assistant. Return the result of the calculation as a single integer.";
+//     const result = await askAi(input, prompt, "gpt-4o-mini");
+//     console.log("AI Response =>", result);
+//   } catch (error) {
+//     console.error("Error =>", error);
+//   }
+// })();
+// Test function to validate the LLM interaction
 

@@ -1,5 +1,5 @@
 import { clearScriptContent, PageContent, storePageContent } from '../content/utils/contentManager';
-import LLM from './utils/llm';
+import {askAi} from './utils/llm';
 import { initializeUser, restoreAccount } from './utils/user';
 
 // Types and Interfaces
@@ -39,7 +39,7 @@ enum STEP_STATUS {
 // Global Variables
 let port: chrome.runtime.Port | null = null;
 let currentTaskId: string | null = null;
-const llm = new LLM();
+
 
 // Helper Functions
 function sendUpdate(message: string, stepIndex?: number, status?: STEP_STATUS): void {
@@ -95,8 +95,7 @@ async function executeActions(actions: ScriptAction[]): Promise<void> {
       sendUpdate(`Executing action: ${action.type}`, i, STEP_STATUS.RUNNING);
 
       switch (action.type) {
-        // case 'open' 
-        // case 'login' 
+
         case 'new-tab':
           console.log('Background: Opening new tab:', action.params[0]);
           tabInstance = await chrome.tabs.create({ url: action.params[0] });
@@ -275,8 +274,8 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   if (request.action === 'inferLLM') {
     (async () => {
       try {
-        const { text, prompt } = request;
-        const result = await llm.sendRequest(text, prompt);
+        const { prompt } = request;
+        const result = await askAi(prompt);
         sendResponse({ success: true, index: result });
       } catch (error) {
         sendResponse({ success: false, error: (error as Error).message });
@@ -291,33 +290,4 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 // Initialize
 chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: true }).catch((error) => console.error(error));
 
-async function initializeLLM() {
-  await llm.initialize();
-}
 
-initializeLLM()
-  .then(() => console.log('LLM initialized'))
-  .catch(console.error);
-
-  // background/index.ts
-
-chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
-  // 1. Only proceed if the tab is fully loaded (changeInfo.status === 'complete')
-  //    and we have a URL to inspect.
-  if (changeInfo.status === 'complete' && tab.url) {
-    // 2. A simple check to see if it's a login page (adjust logic as needed)
-    
-      // 3. Notify the content script to show the login modal
-      chrome.tabs.sendMessage(tabId, { type: 'SHOW_LOGIN_MODAL' });
-    
-  }
-});
-
-// 4. Listen for messages from the injected script
-chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-  if (message.type === 'LOGIN_REDIRECT') {
-    console.log('[background] User has left the login page or logged in.');
-    // Trigger whatever logic you need here
-    // e.g., sendResponse({ success: true });
-  }
-});

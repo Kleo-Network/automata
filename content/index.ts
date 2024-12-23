@@ -10,12 +10,14 @@ interface ExtensionIdEventDetail {
 
 
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+  
+  if(request.action == 'infer'){
+    performInfer(request.queryselector, request.prompt);
+  }
   if (request.action === 'input') {
-    performInput(request.identifierType, request.elementId, request.text);
+    performInput(request.queryselector, request.text);
   } else if (request.action === 'click') {
-    performClick(request.identifierType);
-  } else if (request.action === 'infer') {
-    performInfer(request.identifierType);
+    performClick(request.queryselector);
   } else if (request.action === 'getPageContent') {
     // Use the getPageContent utility function
     getPageContent((content: string, title: string) => {
@@ -42,7 +44,6 @@ with kleo fastapi backend. ---> Vaibhav
 4. select form option and submit that event. ---> Prince
 5. While loop must work specifically for pagination and next pages. ---> Prince
 6. Login screen should work as expected ---> Prince. 
-
 */
 async function performInfer(querySelector: string, prompt: string) {
   console.log('debug');
@@ -51,27 +52,30 @@ async function performInfer(querySelector: string, prompt: string) {
   element = document.querySelector(querySelector);
 
 
+  return new Promise((resolve, reject) => {
     chrome.runtime.sendMessage(
       {
         action: 'inferLLM',
-        text: String(text),
-        prompt: prompt + "\n\n\n" + element },
-      (response) => {
-        // 
+        prompt: prompt,
       },
+      (response) => {
+        if (chrome.runtime.lastError) {
+          console.error('Error sending message:', chrome.runtime.lastError);
+          reject(new Error(chrome.runtime.lastError.message));
+        } else {
+          console.log('debug: Received response from background script');
+          resolve(response);
+        }
+      }
     );
+  });
 }
 
-function performInput(identifierType: string, elementId: string, text: string) {
+function performInput(queryselector: string, text: string) {
   let element: HTMLElement | null = null;
-  if (identifierType === 'id') {
-    element = document.getElementById(elementId);
-  } else if (identifierType === 'class') {
-    element = document.querySelector(`.${elementId}`);
-  } else if (identifierType === 'name') {
-    element = document.querySelector(`[name="${elementId}"]`);
-  }
-
+  
+  element = document.querySelector(queryselector);
+  
   if (element && (element instanceof HTMLInputElement || element instanceof HTMLTextAreaElement)) {
     (element as HTMLInputElement).value = text;
     console.log(`Set value "${text}" for element:`, element);
