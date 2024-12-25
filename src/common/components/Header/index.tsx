@@ -12,7 +12,7 @@ const IMAGES = {
   backIconPath: '../../assets/images/header/backIcon.svg'
 }
 const HEADER_DATA = {
-  kleoPoints: 1784,
+  kleoPoints: 0,
   tabs: [
     {
       id: 'wallet',
@@ -52,7 +52,7 @@ export const Header = () => {
               <img src={IMAGES.kleoCoinPath} className="size-4" />
             </div>
             <div className="text-gray-400 font-medium text-[10px]">
-              <span className="text-gray-700 font-semibold text-sm">{HEADER_DATA.kleoPoints}</span> KLEO
+              <span className="text-gray-700 font-semibold text-sm">{HEADER_DATA.kleoPoints}</span> ACT
             </div>
           </div>
           {/* Wallet and Settings Tabs */}
