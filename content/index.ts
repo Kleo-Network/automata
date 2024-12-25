@@ -1,5 +1,6 @@
 // content/index.ts
 
+import { send } from 'process';
 import { getPageContent } from '../content/utils/getPageContent';
 import { UserData } from '../src/common/hooks/UserContext';
 
@@ -10,10 +11,22 @@ interface ExtensionIdEventDetail {
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   console.log('PRINCE type : ', request.action);
 
-  if (request.action == 'infer') {
-    performInfer(request.queryselector, request.prompt);
+  if (request.action === 'infer') {
+    (async () => {
+      try {
+        console.log('performing infer from line 14', request);
+        const inference = await performInfer(request.queryselector, request.prompt);
+        
+        // Now that performInfer is done, 'inference' is the actual value 
+        // that came back from the background's 'inferLLM' call
+        sendResponse({ result: inference }); 
+      } catch (error: any) {
+        console.error('Infer error:', error);
+        sendResponse({ error: error?.message || 'Unknown error' });
+      }
+    })();
   }
-  if (request.action === 'input') {
+  else if (request.action === 'input') {
     performInput(request.queryselector, request.text);
   } else if (request.action === 'click') {
     performClick(request.queryselector);
@@ -30,6 +43,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     // Send the result back to the background script
     sendResponse({ result });
   }
+  return true;
 });
 
 // click#(infer#...queryselector#prompt)
@@ -49,12 +63,8 @@ with kleo fastapi backend. ---> Vaibhav
 5. While loop must work specifically for pagination and next pages. ---> Prince
 6. Login screen should work as expected ---> Prince.
 */
+// content/index.ts
 async function performInfer(querySelector: string, prompt: string) {
-  console.log('debug');
-  let element: HTMLElement | null = null;
-
-  element = document.querySelector(querySelector);
-
   return new Promise((resolve, reject) => {
     chrome.runtime.sendMessage(
       {
@@ -63,16 +73,24 @@ async function performInfer(querySelector: string, prompt: string) {
       },
       (response) => {
         if (chrome.runtime.lastError) {
-          console.error('Error sending message:', chrome.runtime.lastError);
-          reject(new Error(chrome.runtime.lastError.message));
+          return reject(new Error(chrome.runtime.lastError.message));
+        }
+        if (!response) {
+          return reject(new Error('No response from background!'));
+        }
+
+        // The background currently sends: { success: true, index: result }
+        // If that's the shape, then let's just resolve with `response.index`.
+        if (response.success) {
+          resolve(response.index);
         } else {
-          console.log('debug: Received response from background script');
-          resolve(response);
+          reject(new Error(response.error || 'Unknown error from background'));
         }
       },
     );
   });
 }
+
 
 function performInput(queryselector: string, text: string) {
   let element: HTMLElement | null = null;

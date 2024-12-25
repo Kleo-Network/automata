@@ -70,46 +70,116 @@ function parseParameter(param: string): ScriptAction | string {
 
   // Now parse the inside with the same logic as we do for normal lines,
   // but we only expect a single action, so we can parse just once.
-  const subActions = splitOutsideQuotes(inside, '\n').length > 1
-    ? parseScript(inside) // If you allowed multiline inside
-    : [parseSingleLine(inside)]; // or parse a single line
 
-  // For simplicity, assume only one action in the parentheses
-  if (subActions.length === 1) {
-    return subActions[0];
-  } else {
-    // If you want to handle multiple actions inside parentheses, you'd return them all or handle differently
-    throw new Error('Nested parentheses must contain only one action in this example.');
-  }
+  const action = parseSingleLine(inside);
+  console.log("subaction from line 74 : ", action);
+  return action;
 }
+
+//   const subActions = splitOutsideQuotes(inside, '\n').length > 1
+//     ? parseScript(inside) // If you allowed multiline inside
+//     : [parseSingleLine(inside)]; // or parse a single line
+//   console.log("find subActions at line 76", subActions);
+//   // For simplicity, assume only one action in the parentheses
+//   if (subActions.length === 1) {
+//     return subActions[0];
+//   } else {
+//     // If you want to handle multiple actions inside parentheses, you'd return them all or handle differently
+//     throw new Error('Nested parentheses must contain only one action in this example.');
+//   }
+// }
 
 /**
  * Same idea as parseScript, but for a single line only.
  * Returns a single ScriptAction.
  */
 function parseSingleLine(line: string): ScriptAction {
-  // 1) Split on '#' outside quotes
-  const parts = splitOutsideQuotes(line, '#');
+  // 1) Split by '#' **only** if we're not in quotes or parentheses
+  const parts = splitOutsideParenthesesAndQuotes(line);
 
-  // 2) Remove leading/trailing quotes
-  const sanitizedParts = parts.map((part) => {
-    if (part.startsWith('"') && part.endsWith('"')) {
-      return part.slice(1, -1);
+  // 2) First token is the action type
+  const [type, ...rawParams] = parts;
+
+  // 3) Clean up leading/trailing quotes from each param
+  //    then parseParameter(...) to handle nested ( ... ) actions
+  const sanitizedParams = rawParams.map((p) => {
+    let param = p;
+    if (param.startsWith('"') && param.endsWith('"')) {
+      param = param.slice(1, -1);
     }
-    return part;
+    return parseParameter(param);
   });
-
-  // 3) The first segment is action type, the rest are params
-  const [type, ...rawParams] = sanitizedParts;
-
-  // 4) Parse each param again to check for nested actions
-  const params = rawParams.map(parseParameter);
 
   return {
     type: type as Action,
-    params: params as string[] // or ScriptAction[] if you want to allow sub-actions
+    // If you’d like to handle real nesting, type could be (string|ScriptAction)[] 
+    // but we’ll assume string[] is acceptable once parseParameter returns the correct shape.
+    params: sanitizedParams as string[],
   };
 }
+
+
+/**
+ * Splits a line into tokens by '#' **unless** we are inside quotes 
+ * or inside parentheses. This way, something like:
+ *
+ *   input#"#twotabsearchtextbox"#(infer#".twotabsearchtextbox"#"Prompt")
+ *
+ * ends up as an array of three top-level tokens:
+ *   [
+ *     "input",
+ *     "\"#twotabsearchtextbox\"",
+ *     "(infer#\".twotabsearchtextbox\"#\"Prompt\")"
+ *   ]
+ */
+function splitOutsideParenthesesAndQuotes(line: string): string[] {
+  const results: string[] = [];
+  let current = '';
+  let inQuotes = false;
+  let parenLevel = 0;
+
+  for (let i = 0; i < line.length; i++) {
+    const c = line[i];
+
+    if (c === '"') {
+      // Toggle inQuotes state
+      inQuotes = !inQuotes;
+      current += c;
+    } 
+    else if (!inQuotes) {
+      // If not inside quotes, watch for parentheses
+      if (c === '(') {
+        parenLevel++;
+        current += c;
+      } else if (c === ')') {
+        if (parenLevel > 0) {
+          parenLevel--;
+        }
+        current += c;
+      } 
+      // If we see a '#' and we're not inside any parentheses, it's a top-level delimiter
+      else if (c === '#' && parenLevel === 0) {
+        results.push(current.trim());
+        current = '';
+      } else {
+        current += c;
+      }
+    } 
+    else {
+      // If we're in quotes, just accumulate characters
+      current += c;
+    }
+  }
+
+  // Push the last chunk
+  if (current.trim() !== '') {
+    results.push(current.trim());
+  }
+
+  return results;
+}
+
+
 function splitOutsideQuotes(line: string, delimiter: string): string[] {
   const results: string[] = [];
   let currentSegment = '';
@@ -201,15 +271,32 @@ function parseScript(script: string): ScriptAction[] {
 
 
 function waitForPageLoad(workTabId: number): Promise<void> {
-  return new Promise<void>((resolve) => {
-    chrome.tabs.onUpdated.addListener(function listener(tabId, info) {
-      if (tabId === workTabId && info.status === 'complete') {
-        chrome.tabs.onUpdated.removeListener(listener);
-        resolve();
+  return new Promise<void>((resolve, reject) => {
+    chrome.tabs.get(workTabId, (tab) => {
+      if (!tab) {
+        // If no tab is found, reject
+        return reject(new Error(`No tab found with ID: ${workTabId}`));
       }
+
+      // If the tab is already fully loaded, resolve immediately
+      if (tab.status === 'complete') {
+        return resolve();
+      }
+
+      // Otherwise, wait for onUpdated to tell us the status is 'complete'
+      function listener(tabId: number, info: { status?: string }) {
+        if (tabId === workTabId && info.status === 'complete') {
+          // Stop listening once loaded
+          chrome.tabs.onUpdated.removeListener(listener);
+          resolve();
+        }
+      }
+
+      chrome.tabs.onUpdated.addListener(listener);
     });
   });
 }
+
 
 
 // Main Execution Functions
@@ -222,11 +309,14 @@ async function executeActions(actions: ScriptAction[], tabInstance: chrome.tabs.
       // 1) If any param is a sub-action, resolve it first.
       for (let j = 0; j < action.params.length; j++) {
         const param = action.params[j];
+        console.log('param from line 225 : ', param);
         if (isScriptAction(param)) {
           // param is a nested action
           const subAction = param as ScriptAction;
+          console.log("subAction from line 229 : ", subAction);
           // Execute the sub-action to get a result string
           const subResult = await executeSubAction(subAction, tabInstance);
+          console.log("subResult from line 232 : ", subResult);
           // Replace the param in the parent action with the result
           action.params[j] = subResult;
         }
@@ -381,7 +471,7 @@ async function executeActions(actions: ScriptAction[], tabInstance: chrome.tabs.
           break;
 
         case 'infer':
-          console.log({ action });
+          console.log("infer action exists?", { action });
           if (tabInstance && tabInstance.id) {
             chrome.tabs.sendMessage(tabInstance.id, {
               action: 'infer',
@@ -439,46 +529,57 @@ function isScriptAction(param: any): param is ScriptAction {
 /**
  * Execute a sub-action. Returns the result as a string (or whatever you need).
  */
-async function executeSubAction(action: ScriptAction, currentTab: chrome.tabs.Tab | null): Promise<string> {
-  return new Promise<string>((resolve, reject) => {
-    try {
-      console.log('Executing subAction:', action);
+async function executeSubAction(
+  action: ScriptAction,
+  currentTab: chrome.tabs.Tab | null
+): Promise<string> {
+  console.log('Executing subAction:', action);
+  console.log('Current tab:', currentTab);
 
-      if (currentTab && !currentTab.id) {
-        return reject('No current tab found');
-      }
+  // If there's no valid tab, throw an error immediately
+  if (!currentTab || !currentTab.id) {
+    throw new Error('No valid current tab found');
+  }
 
-      if (currentTab && currentTab.id && action.type === 'infer') {
-        // Example: we send a message to content script to do 'infer'
-        chrome.tabs.sendMessage(
-          currentTab.id,
-          {
-            action: 'infer',
-            queryselector: action.params[0],
-            text: action.params[1]
-          },
-          (response) => {
-            if (chrome.runtime.lastError) {
-              return reject(chrome.runtime.lastError.message);
-            }
-            // Suppose the content script responds with { result: "some text" }
-            if (response?.result) {
-              console.log("result from the subaction", response.result)
-              resolve(response.result);
-            } else {
-              resolve(''); // Or handle differently
-            }
+  // 1) Wait for the page to finish loading
+  await waitForPageLoad(currentTab.id);
+  console.log('Page has finished loading from line 529');
+
+  // 2) Now that the page has loaded, send the message if needed
+  if (action.type === 'infer') {
+    console.log('infer is triggered from line 533');
+    // We'll wrap chrome.tabs.sendMessage in a small Promise utility
+    const response = await new Promise<{ result?: string }>((resolve, reject) => {
+      chrome.tabs.sendMessage(
+        currentTab.id!,
+        {
+          action: 'infer',
+          queryselector: action.params[0],
+          prompt: action.params[1],
+        },
+        (res) => {
+          console.log("result from content/index.ts", res);
+          if (chrome.runtime.lastError) {
+            return reject(chrome.runtime.lastError.message);
           }
-        );
-      } else {
-        // If you want to allow other sub-actions, handle them similarly
-        resolve('');
-      }
-    } catch (err) {
-      reject(err);
+          resolve(res || {});
+        }
+      );
+    });
+
+    // 3) Return the result from the content script, if any
+    if (response.result) {
+      console.log('Result from the subAction:', response.result);
+      return response.result;
+    } else {
+      return '';
     }
-  });
+  } else {
+    // If this sub-action is not "infer", just return an empty string
+    return '';
+  }
 }
+
 
 
 // Event Listeners
@@ -563,8 +664,11 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   if (request.action === 'inferLLM') {
     (async () => {
       try {
+        console.log("what is request", request);
         const { prompt } = request;
+        console.log("prompt from line 640", prompt);
         const result = await askAi(prompt);
+        console.log("result from line 642", result);
         sendResponse({ success: true, index: result });
       } catch (error) {
         sendResponse({ success: false, error: (error as Error).message });
