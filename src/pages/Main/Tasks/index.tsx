@@ -51,7 +51,7 @@ export const Tasks = () => {
           creator: script.creator_address,
           stats: [
             { label: 'Used', value: `${script.used} times`, iconSrc: "../../assets/images/tasks/profileIcon.svg" },
-            { label: 'Earn Upto', value: `+${script.earn_points} ACT`, iconSrc: '../../assets/images/tasks/dollarIcon.svg' },
+            { label: 'Earn Upto', value: `+${script.earn_points} KDAT`, iconSrc: '../../assets/images/tasks/dollarIcon.svg' },
           ]
         }));
     } else {

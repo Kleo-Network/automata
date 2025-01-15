@@ -1,9 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { useParams } from "react-router-dom";
 import useFetch, { FetchStatus } from "../../../common/hooks/useFetch";
-import { parseScript } from "../../../../content/utils/parseScript";
 import { TaskCard } from "./TaskCard";
-
+import { STEP_STATUS, ScriptAction, parseScript, SCRIPT_ACTION_CONFIG } from "../../../common/interface";
 // Constants
 const IMAGES = {
   successIconPath: '../../../assets/images/Tasks/greenTick.svg',
@@ -13,23 +12,8 @@ const IMAGES = {
   pendingIconPath: '../../../assets/images/Tasks/pendingIcon.svg'
 };
 
-// Enums & Types
-export enum STEP_STATUS {
-  PENDING = 'PENDING',
-  RUNNING = 'RUNNING',
-  SUCCESS = 'SUCCESS',
-  ERROR = 'ERROR',
-  FINISHED = 'FINISHED',
-  CREDS_REQUIRED = 'CREDS_REQUIRED'
-}
 
-export interface Step {
-  id: string;
-  message: string;
-  status: STEP_STATUS;
-  action: string;
-  params: string[];
-}
+
 
 interface ScriptData {
   _id: string;
@@ -56,6 +40,9 @@ interface Update {
   message: string;
   stepIndex: number;
   status: STEP_STATUS;
+  actions: ScriptAction[];
+  isPaused: boolean;
+  tabInstance: chrome.tabs.Tab | null;
 }
 
 // Main Component
@@ -64,14 +51,14 @@ export const TaskDetails = () => {
 
   // State Management
   const [scriptStatus, setScriptStatus] = useState(STEP_STATUS.PENDING);
-  const [steps, setSteps] = useState<Step[]>([]);
-  const [inputValue, setInputValue] = useState('Credentials : ');
+  const [steps, setSteps] = useState<ScriptAction[]>([]);
+  const [inputValue, setInputValue] = useState<string>('Input : ');
   const [port, setPort] = useState<chrome.runtime.Port | null>(null);
-  const [scriptExecutionFailed, setScriptExecutionFailed] = useState('');
-
+  const [pauseIndex, setPauseIndex] = useState<number>(0);
+  const [isPause, setIsPause] = useState<boolean>(true);
+  const [tab, setTab] = useState<chrome.tabs.Tab | null>(null);
   // Data Fetching
   const { data, status, error } = useFetch<ScriptResponse>(`script/${taskId}`);
-
   // TODO: @vaibhav Update the scriptResponse to have this field. Right now keeping it false.
   // const inputRequired = data?.script.inputRequired;
   const inputRequired = false;
@@ -85,9 +72,9 @@ export const TaskDetails = () => {
   // Get the steps at Start
   useEffect(() => {
     if (data?.script?.script) {
-      const stepsList = parseScript(data.script.script);
-      setSteps(stepsList);
-      console.log('Parsed steps:', stepsList);
+      const actions = parseScript(data?.script?.script)
+      setSteps(actions);
+      console.log(data?.script?.script)
     }
   }, [data?.script?.script]);
 
@@ -97,27 +84,24 @@ export const TaskDetails = () => {
     setPort(newPort);
     console.log('Connected to background script:', newPort);
 
-    // Initialize tracking
-    newPort.postMessage({
-      action: 'START_TRACKING',
-      taskId
-    });
 
     // Update steps based on background messages
     newPort.onMessage.addListener((update: Update) => {
-      console.log('Received update:', update);
+      if (update) {
+        if (update.tabInstance) {
+          setTab(update.tabInstance);
+        }
 
-      if (update.stepIndex !== undefined && update.status) {
-        setSteps(prevSteps => {
-          const newSteps = [...prevSteps];
-          if (newSteps[update.stepIndex]) {
-            newSteps[update.stepIndex] = {
-              ...newSteps[update.stepIndex],
-              status: update.status
-            };
-          }
-          return newSteps;
-        });
+        if (update.isPaused == true) {
+          setPauseIndex(update.stepIndex);
+          setIsPause(true);
+        }
+
+
+        console.log('Previous Steps', steps);
+        console.log('Received update on new steps:', update);
+        setSteps(update.actions);
+
       }
     });
 
@@ -130,23 +114,17 @@ export const TaskDetails = () => {
   // Event Handlers
   const handlePlayScript = () => {
     if (!data?.script.script) return;
-
+    setIsPause(false);
     console.log('Executing script:', data.script.script);
-    setScriptStatus(STEP_STATUS.RUNNING);
-
     chrome.runtime.sendMessage(
       {
         action: 'executeScript',
-        input: data.script.script
+        input: data.script.script,
+        index: pauseIndex,
+        tabInstance: tab
       },
       (response) => {
         console.log('Script execution response:', response);
-        if (response?.success) {
-          setScriptStatus(STEP_STATUS.FINISHED);
-        } else {
-          setScriptStatus(STEP_STATUS.ERROR);
-          setScriptExecutionFailed(response?.error || 'Script Execution Failed!');
-        }
       }
     );
   };
@@ -194,7 +172,7 @@ export const TaskDetails = () => {
             iconSrc: "../../assets/images/tasks/profileIcon.svg"
           },
           {
-            label: 'Sponsored',
+            label: 'Sponsor',
             value: taskData.sponsored,
             iconSrc: taskData.logo || 'https://example.com/default-icon.png'
           },
@@ -226,30 +204,30 @@ export const TaskDetails = () => {
       <div className="flex justify-center font-medium w-full">
         <button
           className={`px-4 py-2 rounded-md w-full flex gap-3 justify-center items-center text-white
-            ${scriptStatus === STEP_STATUS.RUNNING ? 'bg-gray-400' : 'bg-primary-600 hover:bg-primary-800'}`}
+            ${isPause ? 'bg-primary-600 hover:bg-primary-800' : 'bg-gray-400'}`}
           onClick={handlePlayScript}
-          disabled={scriptStatus === STEP_STATUS.RUNNING}
+          disabled={!isPause}
         >
           {scriptStatus === STEP_STATUS.RUNNING ? 'Script Running...' : 'Play Script'}
         </button>
-      </div>
 
+      </div>
+      <div>
+        {steps.some(step => step.status === STEP_STATUS.CREDS_REQUIRED) && (
+          <div className="w-full p-3 bg-yellow-50 border border-yellow-200 rounded-md text-sm text-yellow-800">
+            Please Sign In to your account. Once you have signed in, click on Play Script button above.
+          </div>)}
+
+      </div>
       <h1 className="font-semibold text-lg mt-2">Log History</h1>
       <div className="rounded-lg flex-1 px-4 py-6 bg-grayblue-800 text-xs text-white w-full overflow-auto">
         {steps.map((historyItem, index) => (
           <HistoryItem
-            content={historyItem.message}
+            item={historyItem}
             status={historyItem.status}
             key={index}
           />
         ))}
-        {scriptStatus === STEP_STATUS.ERROR && (
-          <HistoryItem
-            content={scriptExecutionFailed}
-            status={STEP_STATUS.ERROR}
-            key={steps.length}
-          />
-        )}
       </div>
     </div>
   );
@@ -258,10 +236,10 @@ export const TaskDetails = () => {
 // History Item Sub-component
 interface HistoryItemProps {
   status: STEP_STATUS;
-  content: string;
+  item: ScriptAction;
 }
 
-const HistoryItem = ({ status, content }: HistoryItemProps) => {
+const HistoryItem = ({ status, item }: HistoryItemProps) => {
   const getImagePath = () => {
     switch (status) {
       case STEP_STATUS.SUCCESS:
@@ -278,11 +256,11 @@ const HistoryItem = ({ status, content }: HistoryItemProps) => {
         return IMAGES.infoIconPath;
     }
   };
-
+  const config = SCRIPT_ACTION_CONFIG[item.type as keyof typeof SCRIPT_ACTION_CONFIG];
   return (
     <div className={`w-full flex gap-2 mb-3 ${status === STEP_STATUS.RUNNING ? 'bg-gray-600' : ''}`}>
       <img src={getImagePath()} alt={status} className="size-4" />
-      <p>{content}</p>
+      <p>{item.message}</p>
     </div>
   );
 };

@@ -24,13 +24,13 @@ export const TaskCard = ({
   id,
   showPlayButton = true
 }: TaskCardProps) => {
-  const scriptInput = "new-tab#https://amazon.in\nwait\ninput#id#twotabsearchtextbox#ps5\nclick#id#nav-search-submit-button\nwait\ninfer#class#s-search-results#data-component-type#s-search-result\nwait\nclick#id#buy-now-button"
+  // const scriptInput = "new-tab#https://amazon.in\nwait\ninput#id#twotabsearchtextbox#ps5\nclick#id#nav-search-submit-button\nwait\ninfer#class#s-search-results#data-component-type#s-search-result\nwait\nclick#id#buy-now-button"
   // Handlers for state transitions
   const navigate = useNavigate();
   const handleViewTask = () => navigate(`/app/task/${id}`);
 
   return (
-    <div className={`bg-white rounded-lg shadow-md w-full p-4 flex flex-col gap-3 ${showPlayButton ? 'mb-4' : ''}`}>
+    <div className={`bg-white rounded-lg shadow-md w-full p-3.5 flex flex-col gap-3 ${showPlayButton ? 'mb-4' : ''}`}>
       {/* Favicon + Title + Creator + Rating Row */}
       <div className="flex gap-4">
         <div className="min-h-12 min-w-12 bg-grayblue-100 rounded-md p-3 flex items-center justify-center">
@@ -43,14 +43,14 @@ export const TaskCard = ({
             {/* Rating */}
             <div className="h-fit flex items-center gap-1 px-2 py-1 rounded-full bg-grayblue-100 min-w-fit">
               <img
-                src="../../assets/images/tasks/starIcon.svg"
+                src="../../assets/images/Tasks/yellowStarIcon.svg"
                 alt=""
                 className="size-3"
               />
               <p className="text-[10px]">{rating} Rating</p>
             </div>
           </div>
-          <p className="text-xs">Created by {creator}</p>
+          <p className="text-[10px]">Created by {creator}</p>
         </div>
       </div>
 
@@ -58,7 +58,7 @@ export const TaskCard = ({
       <div className="w-full text-xs">{description}</div>
 
       {/* Stats Pills */}
-      <div className="flex gap-2 flex-wrap mb-1">
+      <div className="flex gap-2 flex-wrap mb-[1px]">
         {stats.map((stat) => (
           <StatPill
             key={stat.label}
@@ -92,11 +92,14 @@ export interface StatPillProps {
 
 export const StatPill = ({ label, value, iconSrc }: StatPillProps) => {
   return (
-    <div className="bg-grayblue-100 rounded-full p-2 gap-1 flex">
-      <img src={iconSrc} alt="" className="size-4 rounded-full" />
-      <p className="text-[10px]">
-        <span className="font-bold">{label}</span> {value}
-      </p>
+    <div className="bg-grayblue-100 rounded-full pt-[2px] pl-[4px] pr-[8px] pb-[4px] gap-1 flex">
+      <div className='rounded-full p-[4px]'>
+        <img src={iconSrc} alt="" className="size-[12px]" />
+      </div>
+      <div className='grid place-items-center'>
+        <p className="text-center text-[10px] ">
+          <span className="font-bold">{label}</span> {value}
+        </p></div>
     </div>
   );
 };

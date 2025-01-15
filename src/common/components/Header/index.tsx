@@ -52,7 +52,7 @@ export const Header = () => {
               <img src={IMAGES.kleoCoinPath} className="size-4" />
             </div>
             <div className="text-gray-400 font-medium text-[10px]">
-              <span className="text-gray-700 font-semibold text-sm">{HEADER_DATA.kleoPoints}</span> ACT
+              <span className="text-gray-700 font-semibold text-sm">{HEADER_DATA.kleoPoints}</span> KDAT
             </div>
           </div>
           {/* Wallet and Settings Tabs */}

@@ -1,124 +1,63 @@
 import { clearScriptContent, PageContent, storePageContent } from '../content/utils/contentManager';
 import { askAi } from './utils/llm';
 import { initializeUser, restoreAccount } from './utils/user';
+import {Action, ScriptAction, UpdateMessage, STEP_STATUS} from './utils/interface';
+import { flareTestnet, metachain } from 'viem/chains';
 
-// Types and Interfaces
-// TODO: Write a function for user to get private key from wallet.
-type Action = 'new-tab' | 'input' | 'click' | 'infer' | 'wait' | 'select' | 'while';
-
-interface ScriptProject {
-  projectScript: string;
-  projectName: string;
-  projectDescription: string;
-  image: string;
-}
-
-interface ScriptAction {
-  type: Action;
-  params: string[];
-}
-
-interface UpdateMessage {
-  timestamp: number;
-  message: string;
-  stepIndex?: number;
-  status?: STEP_STATUS;
-}
-
-// Enums
-enum STEP_STATUS {
-  PENDING = 'PENDING',
-  RUNNING = 'RUNNING',
-  SUCCESS = 'SUCCESS',
-  ERROR = 'ERROR',
-  FINISHED = 'FINISHED',
-  CREDS_REQUIRED = 'CREDS_REQUIRED',
-}
-
-// Global Variables
 let port: chrome.runtime.Port | null = null;
 let currentTaskId: string | null = null;
 
-// Helper Functions
-function sendUpdate(message: string, stepIndex?: number, status?: STEP_STATUS): void {
+function sendUpdate(message: string, stepIndex: number, status: STEP_STATUS, actions?: ScriptAction[], isPaused?: boolean, tabInstance?: chrome.tabs.Tab): void {
   if (port) {
+    if(actions && actions[stepIndex]){
+      actions[stepIndex].status = status;
+      actions[stepIndex].message = message;
+      for(let i=0; i < stepIndex; i++)
+        actions[i].status = STEP_STATUS.SUCCESS;
+    }
+    
     const update: UpdateMessage = {
       timestamp: Date.now(),
-      message,
-      stepIndex,
-      status,
+      stepIndex: stepIndex,
+      actions: actions || [],
+      isPaused: isPaused || false,
+      tabInstance: tabInstance || null
     };
     port.postMessage(update);
   }
 }
 
-/**
- * Checks if a parameter looks like a nested action.
- * Example of a "nested action" in parentheses:
- *   (infer#".abc"#"get button text from this element")
- *
- * If it does, we parse that substring as a separate ScriptAction.
- */
-function parseParameter(param: string): ScriptAction | string {
-  // If the param doesn't start with '(' and end with ')', return as is
+function parseParameter(param: string, lineIndex: number): ScriptAction | string {
   if (!param.startsWith('(') || !param.endsWith(')')) {
     return param; // It's just a normal string parameter
   }
-
-  // Remove outer parentheses
   const inside = param.slice(1, -1).trim(); // "infer#".abc"#"prompt text"
-
-  // Now parse the inside with the same logic as we do for normal lines,
-  // but we only expect a single action, so we can parse just once.
-
-  const action = parseSingleLine(inside);
+  const action = parseSingleLine(inside, lineIndex);
   console.log("subaction from line 74 : ", action);
   return action;
 }
 
-/**
- * Same idea as parseScript, but for a single line only.
- * Returns a single ScriptAction.
- */
-function parseSingleLine(line: string): ScriptAction {
-  // 1) Split by '#' **only** if we're not in quotes or parentheses
+function parseSingleLine(line: string, lineIndex: number): ScriptAction {
   const parts = splitOutsideParenthesesAndQuotes(line);
-
-  // 2) First token is the action type
   const [type, ...rawParams] = parts;
-
-  // 3) Clean up leading/trailing quotes from each param
-  //    then parseParameter(...) to handle nested ( ... ) actions
   const sanitizedParams = rawParams.map((p) => {
     let param = p;
     if (param.startsWith('"') && param.endsWith('"')) {
       param = param.slice(1, -1);
     }
-    return parseParameter(param);
+    return parseParameter(param, lineIndex);
   });
 
   return {
     type: type as Action,
-    // If you’d like to handle real nesting, type could be (string|ScriptAction)[] 
-    // but we’ll assume string[] is acceptable once parseParameter returns the correct shape.
     params: sanitizedParams as string[],
+    stepIndex: lineIndex,
+    status: STEP_STATUS.PENDING,
+    message: `Pending command ${type}`
   };
 }
 
 
-/**
- * Splits a line into tokens by '#' **unless** we are inside quotes 
- * or inside parentheses. This way, something like:
- *
- *   input#"#twotabsearchtextbox"#(infer#".twotabsearchtextbox"#"Prompt")
- *
- * ends up as an array of three top-level tokens:
- *   [
- *     "input",
- *     "\"#twotabsearchtextbox\"",
- *     "(infer#\".twotabsearchtextbox\"#\"Prompt\")"
- *   ]
- */
 function splitOutsideParenthesesAndQuotes(line: string): string[] {
   const results: string[] = [];
   let current = '';
@@ -129,12 +68,10 @@ function splitOutsideParenthesesAndQuotes(line: string): string[] {
     const c = line[i];
 
     if (c === '"') {
-      // Toggle inQuotes state
       inQuotes = !inQuotes;
       current += c;
     } 
     else if (!inQuotes) {
-      // If not inside quotes, watch for parentheses
       if (c === '(') {
         parenLevel++;
         current += c;
@@ -144,7 +81,6 @@ function splitOutsideParenthesesAndQuotes(line: string): string[] {
         }
         current += c;
       } 
-      // If we see a '#' and we're not inside any parentheses, it's a top-level delimiter
       else if (c === '#' && parenLevel === 0) {
         results.push(current.trim());
         current = '';
@@ -153,12 +89,11 @@ function splitOutsideParenthesesAndQuotes(line: string): string[] {
       }
     } 
     else {
-      // If we're in quotes, just accumulate characters
+      
       current += c;
     }
   }
 
-  // Push the last chunk
   if (current.trim() !== '') {
     results.push(current.trim());
   }
@@ -168,17 +103,16 @@ function splitOutsideParenthesesAndQuotes(line: string): string[] {
 
 
 function parseScript(script: string): ScriptAction[] {
-  // 1) Split script into lines, trim each, and filter out empties
   const lines = script
     .split('\n')
     .map((line) => line.trim())
     .filter((line) => line !== '');
 
-  // 2) For each line, handle "while" specially or parse single-line
-  const actions: ScriptAction[] = lines.map((line) => {
-    return parseSingleLine(line);
+  return lines.map((line, index) => {
+    const action = parseSingleLine(line, index);
+    console.log(`Parsed action at step ${index}:`, action);
+    return action;
   });
-  return actions;
 }
 
 
@@ -187,19 +121,15 @@ function waitForPageLoad(workTabId: number): Promise<void> {
   return new Promise<void>((resolve, reject) => {
     chrome.tabs.get(workTabId, (tab) => {
       if (!tab) {
-        // If no tab is found, reject
         return reject(new Error(`No tab found with ID: ${workTabId}`));
       }
 
-      // If the tab is already fully loaded, resolve immediately
       if (tab.status === 'complete') {
         return resolve();
       }
 
-      // Otherwise, wait for onUpdated to tell us the status is 'complete'
       function listener(tabId: number, info: { status?: string }) {
         if (tabId === workTabId && info.status === 'complete') {
-          // Stop listening once loaded
           chrome.tabs.onUpdated.removeListener(listener);
           resolve();
         }
@@ -213,35 +143,52 @@ function waitForPageLoad(workTabId: number): Promise<void> {
 
 
 // Main Execution Functions
-async function executeActions(actions: ScriptAction[], tabInstance: chrome.tabs.Tab | null): Promise<void> {
-  for (let i = 0; i < actions.length; i++) {
+async function executeActions(actions: ScriptAction[], tabInstance: chrome.tabs.Tab | null, startStep: number = 0): Promise<void> {
+  
+  for (let i = startStep; i < actions.length; i++) {
+   
     const action = actions[i];
     try {
-      sendUpdate(`Executing action: ${action.type}`, i, STEP_STATUS.RUNNING);
-
-      // 1) If any param is a sub-action, resolve it first.
+      sendUpdate(`Executing action: ${action.type}`, i, STEP_STATUS.RUNNING, actions);
       for (let j = 0; j < action.params.length; j++) {
         const param = action.params[j];
         console.log('param from line 225 : ', param);
         if (isScriptAction(param)) {
-          // param is a nested action
           const subAction = param as ScriptAction;
           console.log("subAction from line 229 : ", subAction);
-          // Execute the sub-action to get a result string
           const subResult = await executeSubAction(subAction, tabInstance);
           console.log("subResult from line 232 : ", subResult);
-          // Replace the param in the parent action with the result
           action.params[j] = subResult;
         }
       }
 
-      // 2) Now that nested actions (if any) are resolved, you can proceed
+     
       switch (action.type) {
-        case 'new-tab':
+        case 'login':
+          if(tabInstance && tabInstance.id){
+            const sessionState = action.params[1];
+            console.log("The credentials from login for sessionState is"  , sessionState);
+            if(!sessionState || sessionState.toString() === 'false'){
+               sendUpdate('Credentials required', i, STEP_STATUS.CREDS_REQUIRED, actions, true, tabInstance);
+               console.log('Background: Credentials required');
+               return;
+            }
+            else{
+              sendUpdate('Login Completed', i, STEP_STATUS.SUCCESS, actions, false, tabInstance);
+            }
+          }
+          break;
+        case 'open':
+          if (tabInstance && tabInstance.id) {
+            await chrome.tabs.update(tabInstance.id, { url: action.params[0] });
+            sendUpdate(`Navigated to: ${action.params[0]}`, i, STEP_STATUS.SUCCESS, actions, false, tabInstance);
+          } 
+          break;
+        case 'open-tab':
           console.log('Background: Opening new tab:', action.params[0]);
           tabInstance = await chrome.tabs.create({ url: action.params[0] });
           console.log('PRINCE new tab ID : ', tabInstance.id);
-          sendUpdate(`Opened new tab: ${action.params[0]}`);
+          sendUpdate(`Opened new tab: ${action.params[0]}`, i, STEP_STATUS.SUCCESS, actions, false, tabInstance);
           break;
 
         case 'input':
@@ -252,10 +199,21 @@ async function executeActions(actions: ScriptAction[], tabInstance: chrome.tabs.
               queryselector: action.params[0],
               text: action.params[1],
             });
-            sendUpdate(`Input entered: ${action.params[1]}`);
+            sendUpdate(`Input entered: ${action.params[1]}`, i, STEP_STATUS.SUCCESS, actions, false, tabInstance);
           }
           break;
-
+        
+        case 'fetch':
+          if(tabInstance && tabInstance.id){
+            sendUpdate(`Fetching: ${action.params[0]}`, i, STEP_STATUS.RUNNING, actions, false, tabInstance);
+            chrome.tabs.sendMessage(tabInstance.id, {
+              action: 'fetch',
+              queryselector: action.params[0],
+              method: action.params[1]
+            });
+            sendUpdate(`Fetched: ${action.params[0]}`, i, STEP_STATUS.SUCCESS, actions, false, tabInstance);
+          }
+          break;  
         case 'select':
           if (tabInstance && tabInstance.id) {
             console.log('PRINCE : sending select event ', action);
@@ -264,6 +222,7 @@ async function executeActions(actions: ScriptAction[], tabInstance: chrome.tabs.
               filterQuerySelector: action.params[0],
               filterValue: action.params[1],
             });
+            sendUpdate(`Selected: ${action.params[1]}`, i, STEP_STATUS.SUCCESS, actions, false, tabInstance);
           }
           break;
 
@@ -274,89 +233,73 @@ async function executeActions(actions: ScriptAction[], tabInstance: chrome.tabs.
               action: 'click',
               queryselector: action.params[0],
             });
+            sendUpdate(`Clicked: ${action.params[0]}`, i, STEP_STATUS.SUCCESS, actions, false, tabInstance);
           }
           break;
 
-        case 'infer':
-          await new Promise(resolve => setTimeout(resolve, 2000));
-          console.log("infer action exists?", { action });
-          if (tabInstance && tabInstance.id) {
-            chrome.tabs.sendMessage(tabInstance.id, {
-              action: 'infer',
-              queryselector: action.params[0],
-              prompt: action.params[1],
-            });
-          }
-          break;
+          case 'infer':
+            await new Promise(resolve => setTimeout(resolve, 2000));
+            console.log("infer action exists?", { action });
+            if (tabInstance && tabInstance.id) {
+              const response = await chrome.tabs.sendMessage(tabInstance.id, {
+                action: 'infer',
+                queryselector: action.params[0],
+                prompt: action.params[1],
+              });
+              console.log('response from line 244', response);
+              if (response && response.actions_infer) {
+                const inferredActions = response.actions_infer;
+                const updatedActions = [...actions, ...inferredActions]
+                sendUpdate(`Inferred: mention the inferred actions by having some margin! `, i, STEP_STATUS.SUCCESS, updatedActions);
+                await executeActions(inferredActions, tabInstance);
+              } else {
+                console.log('No inferred actions received from content script');
+                sendUpdate(`Inferred: mention the inferred actions by having some margin! `, i, STEP_STATUS.SUCCESS, actions);
+              }
+            }
+            break;
 
         case 'wait':
           console.log('Background: Waiting for page load');
           if (tabInstance && tabInstance.id) {
-            sendUpdate('Waiting for page to load...');
+            sendUpdate('Waiting for page to load...', i, STEP_STATUS.RUNNING, actions);
             await waitForPageLoad(tabInstance.id);
-
-            // Collect page content after load
-            if (currentTaskId) {
-              chrome.tabs.sendMessage(tabInstance.id, { action: 'getPageContent' }, async (response) => {
-                if (response?.content && response?.title) {
-                  const pageContent: PageContent = {
-                    url: tabInstance!.url || '',
-                    title: response.title,
-                    content: response.content,
-                    timestamp: Date.now(),
-                  };
-                  await storePageContent(currentTaskId!, pageContent);
-                  console.log('Current TaskID : ', currentTaskId);
-                }
-              });
-            }
-
-            sendUpdate('Page loaded successfully');
+            sendUpdate('Page loaded successfully', i, STEP_STATUS.SUCCESS, actions);
           }
           break;
       }
-
-      sendUpdate(`Completed: ${action.type}`, i, STEP_STATUS.SUCCESS);
+      
     } catch (error) {
       console.error('Background: Action execution error:', error);
-      sendUpdate(`Error executing ${action.type}: ${(error as Error).message}`, i, STEP_STATUS.ERROR);
-      throw error;  // or handle it in some other way
+      sendUpdate(`Error executing ${action.type}: ${(error as Error).message}`, 0, STEP_STATUS.ERROR, actions);
+      throw error;  
     }
   }
-
-  sendUpdate('Script execution completed');
+  
+  sendUpdate('Script execution completed',1000, STEP_STATUS.SUCCESS, actions);
+  return;
 }
 
-/**
- * Checks if the given parameter is a ScriptAction object vs. a string.
- */
+
 function isScriptAction(param: any): param is ScriptAction {
   return typeof param === 'object' && param.type !== undefined && param.params !== undefined;
 }
 
-/**
- * Execute a sub-action. Returns the result as a string (or whatever you need).
- */
+
 async function executeSubAction(
   action: ScriptAction,
   currentTab: chrome.tabs.Tab | null
 ): Promise<string> {
-  console.log('Executing subAction:', action);
-  console.log('Current tab:', currentTab);
 
-  // If there's no valid tab, throw an error immediately
   if (!currentTab || !currentTab.id) {
     throw new Error('No valid current tab found');
   }
 
-  // 1) Wait for the page to finish loading
   await waitForPageLoad(currentTab.id);
   console.log('Page has finished loading from line 529');
 
-  // 2) Now that the page has loaded, send the message if needed
   if (action.type === 'infer') {
     console.log('infer is triggered from line 533');
-    // We'll wrap chrome.tabs.sendMessage in a small Promise utility
     const response = await new Promise<{ result?: string }>((resolve, reject) => {
       chrome.tabs.sendMessage(
         currentTab.id!,
@@ -375,7 +318,6 @@ async function executeSubAction(
       );
     });
 
-    // 3) Return the result from the content script, if any
     if (response.result) {
       console.log('Result from the subAction:', response.result);
       return response.result;
@@ -383,14 +325,12 @@ async function executeSubAction(
       return '';
     }
   } else {
-    // If this sub-action is not "infer", just return an empty string
     return '';
   }
 }
 
 
 
-// Event Listeners
 chrome.runtime.onConnect.addListener((connectingPort) => {
   if (connectingPort.name === 'tracking-port') {
     console.log('Background: New port connection established');
@@ -404,19 +344,9 @@ chrome.runtime.onConnect.addListener((connectingPort) => {
         currentTaskId = null;
       }
     });
-
-    port.onMessage.addListener((msg) => {
-      console.log('Background: Received message from frontend:', msg);
-      if (msg.action === 'START_TRACKING') {
-        console.log('Background: Starting tracking for task:', msg.taskId);
-        currentTaskId = msg.taskId;
-        sendUpdate('Started tracking task ' + msg.taskId);
-      }
-    });
   }
 });
 
-// Message Listeners
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   console.log('listener running from background.ts');
 
@@ -448,12 +378,16 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   if (request.action === 'executeScript') {
     (async () => {
       try {
+        console.log('Background: Parsing script:', request.input);
         const content = request.input;
+        const index = request.index;
+        const tabInstance = request.tabInstance;
         if (content) {
           console.log('Background: Parsing script:', content);
           const actions = parseScript(content);
           console.log('BG actions after parsing : ', actions);
-          await executeActions(actions, null);
+          console.log('Background: Executing actions');
+          await executeActions(actions, tabInstance, index);
           console.log('Background: Script execution completed');
           sendResponse({ success: true });
         } else {
@@ -462,7 +396,6 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         }
       } catch (error) {
         console.error('Background: Script execution error:', error);
-        // await clearScriptContent(currentTaskId || '');
         sendResponse({ success: false, error: (error as Error).message });
       }
     })();

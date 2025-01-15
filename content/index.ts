@@ -1,7 +1,6 @@
 // content/index.ts
 
 import { send } from 'process';
-import { getPageContent } from '../content/utils/getPageContent';
 import { UserData } from '../src/common/hooks/UserContext';
 
 interface ExtensionIdEventDetail {
@@ -15,8 +14,6 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     (async () => {
       try {
         const inference = await performInfer(request.queryselector, request.prompt);
-        // Now that performInfer is done, 'inference' is the actual value 
-        // that came back from the background's 'inferLLM' call
         sendResponse({ result: inference }); 
       } catch (error: any) {
         console.error('Infer error:', error);
@@ -24,27 +21,28 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       }
     })();
   }
+  else if(request.action === 'fetch'){
+    performFetch(request.querySelector, request.method);
+  }
   else if (request.action === 'input') {
     performInput(request.queryselector, request.text);
   } else if (request.action === 'click') {
     performClick(request.queryselector);
-  } else if (request.action === 'getPageContent') {
-    // Use the getPageContent utility function
-    getPageContent((content: string, title: string) => {
-      sendResponse({ content, title });
-    });
   } else if (request.action === 'select') {
     performSelect(request.filterQuerySelector, request.filterValue);
   } 
   return true;
 });
-
-async function performInfer(querySelector: string, prompt: string) {
-
-  return new Promise((resolve, reject) => {
-    alert(querySelector);
+async function performFetch(querySelector: string, method: string){
     const elem = document.querySelector(querySelector);
-    alert(elem);
+    const result = await chrome.storage.local.get(method);
+    result.push(elem);
+    await chrome.storage.local.set({ method: result});
+}
+async function performInfer(querySelector: string, prompt: string) {
+// add a param here if performInfer is to called from  direct inference such that or nested inference.
+  return new Promise((resolve, reject) => {
+    const elem = document.querySelector(querySelector);
     const html = elem ? elem.outerHTML : '';
     chrome.runtime.sendMessage(
       {
@@ -58,9 +56,6 @@ async function performInfer(querySelector: string, prompt: string) {
         if (!response) {
           return reject(new Error('No response from background!'));
         }
-
-        // The background currently sends: { success: true, index: result }
-        // If that's the shape, then let's just resolve with `response.index`.
         if (response.success) {
           resolve(response.index);
         } else {
