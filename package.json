@@ -1,6 +1,6 @@
 {
   "name": "kleo-network",
-  "version": "3.7",
+  "version": "4.0",
   "private": true,
   "dependencies": {
     "@svgr/webpack": "^8.1.0",

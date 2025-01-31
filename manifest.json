@@ -1,8 +1,8 @@
 {
     "manifest_version": 3,
-    "name": "Automata",
-    "version": "3.8",
-    "description": "Automata is a user consumption DATA DAO. Use your data to it's maximum potential.",
+    "name": "Kleo Network",
+    "version": "4.0",
+    "description": "Automata is a user consumption DATA DAO. Own and use your data to it's maximum potential.",
     "background": {
       "service_worker": "background.js"
     },
