@@ -86,6 +86,7 @@ export const Wallet = () => {
   useEffect(() => {
     const fetchData = async () => {
       try {
+
         // Fetch Balance
         const balances = await vanaWalletApi('GET', `/addresses/${userAddress}/token-balances`);
         const rawBalance = balances[0]?.value ?? '0';

@@ -1,8 +1,8 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useContext } from "react";
 import { TaskCard } from "./TaskCard";
 import useFetch, { FetchStatus } from "../../../common/hooks/useFetch";
 import { UserContext } from '../../../common/hooks/UserContext';
-import { useContext } from 'react';
+
 type Script = {
   _id: string;
   creator_address: string;
@@ -18,80 +18,77 @@ type Script = {
   created_at: string;
   verified: boolean;
 };
-type ScriptsResponse = {
-  scripts: Script[];
-};
 
-// const IMAGES = {
-//   searchIconPath: '../../../assets/images/Tasks/searchIcon.svg'
-// }
-
-const TASKS_PAGE_DATA = {
-  title: "Own Data, Earn Crypto Tokens",
-  desc: "Select your task and sit back as your personal AI assistant takes over."
+type ApiResponse = {
+  scripts: {
+    _id: string;
+    status: 'completed' | 'pending' | 'processing';
+    script: Script;
+    data?: {
+      status: string;
+      data_hash: string;
+      result?: any;
+      reward_tx_hash?: string;
+      proof_tx_hash?: string;
+    };
+  }[];
 };
 
 export const Tasks = () => {
-  const [searchString, setSearchString] = useState('');
   const { user } = useContext(UserContext);
-  const { data, status, error } = useFetch<ScriptsResponse>(`script/all/${user?.address}`);
+
+  // Only make the API call if we have a user address
+  const { data, status, error } = useFetch<ApiResponse>(
+    user?.address ? `script/all/${user.address}` : undefined,
+    {}, // options
+    [user?.address] // dependencies
+  );
 
   const taskCards = useMemo(() => {
-    if (data?.scripts) {
-      // Map the fetched scripts to the TaskCard props format
-      return data.scripts
-        .filter((script) => script.verified) // Ensure only verified scripts
-        .map((script) => ({
-          id: script._id,
-          title: script.name,
-          description: script.description,
-          iconSrc: script.logo || 'https://example.com/default-icon.png',
-          script: script.script,
-          rating: script.rating,
-          creator: script.creator_address,
-          stats: [
-            { label: 'Used', value: `${script.used} times`, iconSrc: "../../assets/images/tasks/profileIcon.svg" },
-            { label: 'Earn Upto', value: `+${script.earn_points} KDAT`, iconSrc: '../../assets/images/tasks/dollarIcon.svg' },
-          ]
-        }));
-    } else {
-      return [];
-    }
+    if (!data?.scripts) return [];
+
+    return data.scripts
+      .filter(item => item.script.verified)
+      .map(item => ({
+        id: item._id,
+        title: item.script.name,
+        description: item.script.description,
+        iconSrc: item.script.logo || 'https://example.com/default-icon.png',
+        script: item.script.script,
+        rating: item.script.rating,
+        creator: item.script.creator_address,
+        status: item.status,
+        item_url: item.status === 'processing'
+          ? 'processing'
+          : item.status === 'completed'
+            ? item.data?.reward_tx_hash || ''
+            : '',
+        stats: [{
+          label: 'Earn Upto',
+          value: `+${item.script.earn_points} KDAT`,
+          iconSrc: '../../assets/images/tasks/dollarIcon.svg'
+        }]
+      }));
   }, [data]);
 
-  const handleSearchUpdate = (newValue: string) => {
-    setSearchString(newValue);
-  };
-  const handleSearchSubmit = () => {
-    console.log('Performing search for:', searchString);
-    // TODO: @vaibhav Add your search functionality here
-  };
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter') {
-      handleSearchSubmit();
-    }
-  };
+  // Show loading state if user isn't loaded yet
+  if (!user?.address) {
+    return (
+      <div className="h-[calc(100vh-52px)] w-full bg-grayblue-100 p-6 flex items-center justify-center">
+        <div>Loading user information...</div>
+      </div>
+    );
+  }
 
   return (
     <div className="h-[calc(100vh-52px)] w-full bg-grayblue-100 p-6 flex flex-col items-center gap-4">
-      {/* Title + Description */}
       <div className="w-full flex flex-col gap-1 font-sans">
-        <h1 className="font-bold text-2xl">{TASKS_PAGE_DATA.title}</h1>
-        <p className="text-xs text-gray-700">{TASKS_PAGE_DATA.desc}</p>
+        <h1 className="font-bold text-2xl">Own Data, Earn Crypto Tokens</h1>
+        <p className="text-xs text-gray-700">
+          Select your task and sit back as your personal AI assistant takes over.
+        </p>
       </div>
-      {/* Search Bar */}
-      {/* <div className="flex items-center gap-3 rounded-lg bg-grayblue-200 px-4 py-2 w-full">
-        <img src={IMAGES.searchIconPath} className="size-[18px]" />
-        <input
-          type="text"
-          placeholder="Search cards"
-          value={searchString}
-          onChange={(e) => handleSearchUpdate(e.target.value)}
-          onKeyDown={handleKeyDown}
-          className="w-full bg-transparent text-sm outline-none placeholder:text-gray-500"
-        />
-      </div> */}
-      {/* Tasks List */}
+
       <div className="overflow-auto w-full flex-1">
         {status === FetchStatus.LOADING && (
           <div>Loading tasks...</div>
@@ -107,19 +104,12 @@ export const Tasks = () => {
             {taskCards.map((taskCard) => (
               <TaskCard
                 key={taskCard.id}
-                creator={taskCard.creator}
-                description={taskCard.description}
-                iconSrc={taskCard.iconSrc}
-                rating={taskCard.rating}
-                script={taskCard.script}
-                stats={taskCard.stats}
-                title={taskCard.title}
-                id={taskCard.id}
+                {...taskCard}
               />
             ))}
           </>
         )}
       </div>
     </div>
-  )
-}
+  );
+};

@@ -121,7 +121,8 @@ export const TaskDetails = () => {
         action: 'executeScript',
         input: data.script.script,
         index: pauseIndex,
-        tabInstance: tab
+        tabInstance: tab,
+        script_id: taskId
       },
       (response) => {
         console.log('Script execution response:', response);

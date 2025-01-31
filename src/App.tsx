@@ -5,7 +5,7 @@ import { Main } from './pages/Main';
 import { UserProvider, UserContext } from './common/hooks/UserContext';
 function AppRoutes() {
   const { user } = useContext(UserContext);
-
+  console.log("first time user render", user);
   return (
     <Routes>
       <Route

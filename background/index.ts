@@ -1,11 +1,21 @@
+// background/index.ts
+
 import { clearScriptContent, PageContent, storePageContent } from '../content/utils/contentManager';
 import { askAi } from './utils/llm';
 import { initializeUser, restoreAccount } from './utils/user';
 import {Action, ScriptAction, UpdateMessage, STEP_STATUS} from './utils/interface';
-import { flareTestnet, metachain } from 'viem/chains';
+import {apiRequest} from './utils/api';
 
 let port: chrome.runtime.Port | null = null;
 let currentTaskId: string | null = null;
+
+
+enum ScriptState {
+  PAUSED = "PAUSED",
+  RUNNING = "RUNNING",
+  FINISHED = "FINISHED"
+  
+}
 
 function sendUpdate(message: string, stepIndex: number, status: STEP_STATUS, actions?: ScriptAction[], isPaused?: boolean, tabInstance?: chrome.tabs.Tab): void {
   if (port) {
@@ -27,80 +37,17 @@ function sendUpdate(message: string, stepIndex: number, status: STEP_STATUS, act
   }
 }
 
+
+
 function parseParameter(param: string, lineIndex: number): ScriptAction | string {
+  param = param.trim();
   if (!param.startsWith('(') || !param.endsWith(')')) {
     return param; // It's just a normal string parameter
   }
-  const inside = param.slice(1, -1).trim(); // "infer#".abc"#"prompt text"
+  const inside = param.slice(1, -1).trim();
   const action = parseSingleLine(inside, lineIndex);
-  console.log("subaction from line 74 : ", action);
   return action;
 }
-
-function parseSingleLine(line: string, lineIndex: number): ScriptAction {
-  const parts = splitOutsideParenthesesAndQuotes(line);
-  const [type, ...rawParams] = parts;
-  const sanitizedParams = rawParams.map((p) => {
-    let param = p;
-    if (param.startsWith('"') && param.endsWith('"')) {
-      param = param.slice(1, -1);
-    }
-    return parseParameter(param, lineIndex);
-  });
-
-  return {
-    type: type as Action,
-    params: sanitizedParams as string[],
-    stepIndex: lineIndex,
-    status: STEP_STATUS.PENDING,
-    message: `Pending command ${type}`
-  };
-}
-
-
-function splitOutsideParenthesesAndQuotes(line: string): string[] {
-  const results: string[] = [];
-  let current = '';
-  let inQuotes = false;
-  let parenLevel = 0;
-
-  for (let i = 0; i < line.length; i++) {
-    const c = line[i];
-
-    if (c === '"') {
-      inQuotes = !inQuotes;
-      current += c;
-    } 
-    else if (!inQuotes) {
-      if (c === '(') {
-        parenLevel++;
-        current += c;
-      } else if (c === ')') {
-        if (parenLevel > 0) {
-          parenLevel--;
-        }
-        current += c;
-      } 
-      else if (c === '#' && parenLevel === 0) {
-        results.push(current.trim());
-        current = '';
-      } else {
-        current += c;
-      }
-    } 
-    else {
-      
-      current += c;
-    }
-  }
-
-  if (current.trim() !== '') {
-    results.push(current.trim());
-  }
-
-  return results;
-}
-
 
 function parseScript(script: string): ScriptAction[] {
   const lines = script
@@ -108,12 +55,121 @@ function parseScript(script: string): ScriptAction[] {
     .map((line) => line.trim())
     .filter((line) => line !== '');
 
-  return lines.map((line, index) => {
-    const action = parseSingleLine(line, index);
-    console.log(`Parsed action at step ${index}:`, action);
-    return action;
-  });
+  const actions: ScriptAction[] = [];
+  let inWhileBlock = false;
+  let whileActions: ScriptAction[] = [];
+  let currentWhileParams: any[] = [];
+  let lineIndex = 0;
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    
+    if (line.startsWith('while#')) {
+      inWhileBlock = true;
+      // Handle the while statement parsing
+      const whileLine = line.substring(6); // Remove 'while#'
+      const inferStartIndex = whileLine.indexOf('(');
+      const inferEndIndex = whileLine.lastIndexOf(')');
+      
+      if (inferStartIndex !== -1 && inferEndIndex !== -1) {
+        // Extract querySelector and infer action
+        const querySelector = whileLine.substring(0, inferStartIndex).split('#')[0];
+        const inferPart = whileLine.substring(inferStartIndex + 1, inferEndIndex);
+        
+        // Parse the infer action
+        const inferAction = parseSingleLine(inferPart, lineIndex);
+        currentWhileParams = [querySelector, inferAction];
+      } else {
+        // Handle normal while parameters
+        currentWhileParams = whileLine.split('#').map(param => parseParameter(param, lineIndex));
+      }
+      continue;
+    }
+
+    if (line === 'end while') {
+      inWhileBlock = false;
+      actions.push({
+        type: 'while',
+        params: [...currentWhileParams, whileActions],
+        stepIndex: lineIndex++,
+        status: STEP_STATUS.PENDING,
+        message: `Pending while loop`
+      });
+      whileActions = [];
+      continue;
+    }
+
+    if (inWhileBlock) {
+      const action = parseSingleLine(line, lineIndex++);
+      whileActions.push(action);
+    } else {
+      const action = parseSingleLine(line, lineIndex++);
+      actions.push(action);
+    }
+  }
+
+  return actions;
 }
+
+function parseSingleLine(line: string, lineIndex: number): ScriptAction {
+  const parts = splitOutsideParenthesesAndQuotes(line);
+  const [type, ...rawParams] = parts;
+  
+  const sanitizedParams = rawParams.map(param => {
+    let cleaned = param.trim();
+    if (cleaned.startsWith('"') && cleaned.endsWith('"')) {
+      cleaned = cleaned.slice(1, -1);
+    }
+    return cleaned;
+  });
+
+  return {
+    type: type.trim(),
+    params: sanitizedParams,
+    stepIndex: lineIndex,
+    status: STEP_STATUS.PENDING,
+    message: `Pending command ${type}`
+  };
+}
+
+function splitOutsideParenthesesAndQuotes(line: string): string[] {
+  const results: string[] = [];
+  let current = '';
+  let inQuotes = false;
+  let parenCount = 0;
+
+  for (let i = 0; i < line.length; i++) {
+    const char = line[i];
+
+    if (char === '"' && line[i - 1] !== '\\') {
+      inQuotes = !inQuotes;
+      current += char;
+    } else if (char === '(' && !inQuotes) {
+      parenCount++;
+      current += char;
+    } else if (char === ')' && !inQuotes) {
+      parenCount--;
+      current += char;
+    } else if (char === '#' && !inQuotes && parenCount === 0) {
+      results.push(current.trim());
+      current = '';
+    } else {
+      current += char;
+    }
+  }
+
+  if (current.trim()) {
+    results.push(current.trim());
+  }
+
+  return results.filter(r => r !== '');
+}
+
+
+
+
+
+
 
 
 
@@ -140,13 +196,17 @@ function waitForPageLoad(workTabId: number): Promise<void> {
   });
 }
 
-
+async function getKeyValue(key: string): Promise<any> {
+  const result = await chrome.storage.local.get(key);
+  console.log("result from line 153 : ", result);
+  return result[key];
+}
 
 // Main Execution Functions
-async function executeActions(actions: ScriptAction[], tabInstance: chrome.tabs.Tab | null, startStep: number = 0): Promise<void> {
+async function executeActions(actions: ScriptAction[], tabInstance: chrome.tabs.Tab | null, startStep: number = 0): Promise<ScriptState> {
   
   for (let i = startStep; i < actions.length; i++) {
-   
+    console.log("Actions in Background : ", actions);
     const action = actions[i];
     try {
       sendUpdate(`Executing action: ${action.type}`, i, STEP_STATUS.RUNNING, actions);
@@ -168,10 +228,10 @@ async function executeActions(actions: ScriptAction[], tabInstance: chrome.tabs.
           if(tabInstance && tabInstance.id){
             const sessionState = action.params[1];
             console.log("The credentials from login for sessionState is"  , sessionState);
-            if(!sessionState || sessionState.toString() === 'false'){
+            if(sessionState && sessionState.toString().toLowerCase() === "false"){
                sendUpdate('Credentials required', i, STEP_STATUS.CREDS_REQUIRED, actions, true, tabInstance);
                console.log('Background: Credentials required');
-               return;
+               return ScriptState.PAUSED;
             }
             else{
               sendUpdate('Login Completed', i, STEP_STATUS.SUCCESS, actions, false, tabInstance);
@@ -207,7 +267,7 @@ async function executeActions(actions: ScriptAction[], tabInstance: chrome.tabs.
           if(tabInstance && tabInstance.id){
             sendUpdate(`Fetching: ${action.params[0]}`, i, STEP_STATUS.RUNNING, actions, false, tabInstance);
             chrome.tabs.sendMessage(tabInstance.id, {
-              action: 'fetch',
+              action: 'fetch_data',
               queryselector: action.params[0],
               method: action.params[1]
             });
@@ -245,6 +305,8 @@ async function executeActions(actions: ScriptAction[], tabInstance: chrome.tabs.
                 action: 'infer',
                 queryselector: action.params[0],
                 prompt: action.params[1],
+                stepIndex: i + 1,
+                custom: action.params[2] ?? ""
               });
               console.log('response from line 244', response);
               if (response && response.actions_infer) {
@@ -258,12 +320,140 @@ async function executeActions(actions: ScriptAction[], tabInstance: chrome.tabs.
               }
             }
             break;
+        //while#queryselector#number_of_times: 
+        //click#queryselector 
+        //fetch#queryselector#text
+        //input#queryselector#text
+        //end while
+        // Replace the while case in the switch statement within executeActions function
+        // Update the while case in executeActions function
+        case 'while':
+          if (tabInstance && tabInstance.id) {
+            const querySelector = action.params[0];
+            let iterations;
+            
+            // Handle nested infer action in iterations parameter
+            console.log("while aparams ", action.params);
+            if (isScriptAction(action.params[1])) {
+              console.log("Processing nested infer action for iterations:", action.params[1]);
+              const inferResult = await executeSubAction(action.params[1], tabInstance);
+              iterations = parseInt(inferResult);
+              console.log("Inferred number of iterations:", iterations);
+            } else {
+              iterations = parseInt(action.params[1]);
+            }
+            
+            if (isNaN(iterations)) {
+              console.error("Invalid number of iterations");
+              sendUpdate(`Error: Invalid number of iterations`, i, STEP_STATUS.ERROR, actions);
+              break;
+            }
 
+            const nestedActions = action.params[2] as ScriptAction[];
+            
+            
+            for (let iter = 0; iter < iterations; iter++) {
+              console.log(`Executing iteration ${iter + 1} of ${iterations}`);
+              await new Promise(resolve => setTimeout(resolve, 1000));
+              // Execute each nested action
+              for (const nestedAction of nestedActions) {
+                const actionCopy = {
+                  ...nestedAction,
+                  stepIndex: i + 1 + iter * nestedActions.length
+                };
+                
+                try {
+                  switch (actionCopy.type) {
+                    case 'click':
+                      await new Promise<void>((resolve) => {
+                        chrome.tabs.sendMessage(
+                          tabInstance?.id!,
+                          {
+                            action: 'click',
+                            queryselector: actionCopy.params[0]
+                          },
+                          () => {
+                            if (chrome.runtime.lastError) {
+                              console.error(chrome.runtime.lastError);
+                            }
+                            resolve();
+                          }
+                        );
+                      });
+                      break;
+                      
+                    case 'fetch':
+                      await new Promise<void>((resolve) => {
+                        chrome.tabs.sendMessage(
+                          tabInstance?.id!,
+                          {
+                            action: 'fetch_data',
+                            queryselector: actionCopy.params[0],
+                            method: actionCopy.params[1]
+                          },
+                          () => {
+                            if (chrome.runtime.lastError) {
+                              console.error(chrome.runtime.lastError);
+                            }
+                            resolve();
+                          }
+                        );
+                      });
+                      break;
+                      
+                    case 'input':
+                      await new Promise<void>((resolve) => {
+                        chrome.tabs.sendMessage(
+                          tabInstance?.id!,
+                          {
+                            action: 'input',
+                            queryselector: actionCopy.params[0],
+                            text: actionCopy.params[1]
+                          },
+                          () => {
+                            if (chrome.runtime.lastError) {
+                              console.error(chrome.runtime.lastError);
+                            }
+                            resolve();
+                          }
+                        );
+                      });
+                      break;
+                      
+                    case 'wait':
+                      await new Promise(resolve => setTimeout(resolve, 2000));
+                      break;
+                  }
+                  
+                  sendUpdate(`Executed nested action: ${actionCopy.type}`, 
+                            actionCopy.stepIndex, 
+                            STEP_STATUS.SUCCESS, 
+                            actions);
+                            
+                } catch (error) {
+                  console.error(`Error in nested action ${actionCopy.type}:`, error);
+                  sendUpdate(`Error in nested action: ${actionCopy.type}`, 
+                            actionCopy.stepIndex, 
+                            STEP_STATUS.ERROR, 
+                            actions);
+                  throw error;
+                }
+              }
+              
+              // Add delay between iterations
+              await new Promise(resolve => setTimeout(resolve, 1000));
+            }
+            
+            sendUpdate(`Completed while loop`, i, STEP_STATUS.SUCCESS, actions);
+          }
+          break;
+            
         case 'wait':
           console.log('Background: Waiting for page load');
           if (tabInstance && tabInstance.id) {
             sendUpdate('Waiting for page to load...', i, STEP_STATUS.RUNNING, actions);
             await waitForPageLoad(tabInstance.id);
+            await new Promise(resolve => setTimeout(resolve, 2000));
             sendUpdate('Page loaded successfully', i, STEP_STATUS.SUCCESS, actions);
           }
           break;
@@ -277,7 +467,7 @@ async function executeActions(actions: ScriptAction[], tabInstance: chrome.tabs.
   }
   
   sendUpdate('Script execution completed',1000, STEP_STATUS.SUCCESS, actions);
-  return;
+  return ScriptState.FINISHED;
 }
 
 
@@ -290,16 +480,15 @@ async function executeSubAction(
   action: ScriptAction,
   currentTab: chrome.tabs.Tab | null
 ): Promise<string> {
-
   if (!currentTab || !currentTab.id) {
     throw new Error('No valid current tab found');
   }
 
   await waitForPageLoad(currentTab.id);
-  console.log('Page has finished loading from line 529');
-
+  
+  // Handle infer action specifically
   if (action.type === 'infer') {
-    console.log('infer is triggered from line 533');
+    console.log('Executing infer sub-action:', action);
     const response = await new Promise<{ result?: string }>((resolve, reject) => {
       chrome.tabs.sendMessage(
         currentTab.id!,
@@ -309,7 +498,6 @@ async function executeSubAction(
           prompt: action.params[1],
         },
         (res) => {
-          console.log("result from content/index.ts", res);
           if (chrome.runtime.lastError) {
             return reject(chrome.runtime.lastError.message);
           }
@@ -319,17 +507,11 @@ async function executeSubAction(
     });
 
     if (response.result) {
-      console.log('Result from the subAction:', response.result);
       return response.result;
-    } else {
-      return '';
     }
-  } else {
-    return '';
   }
+  return '';
 }
-
-
 
 chrome.runtime.onConnect.addListener((connectingPort) => {
   if (connectingPort.name === 'tracking-port') {
@@ -378,22 +560,58 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   if (request.action === 'executeScript') {
     (async () => {
       try {
-        console.log('Background: Parsing script:', request.input);
         const content = request.input;
         const index = request.index;
         const tabInstance = request.tabInstance;
+        const script_id = request.script_id;
         if (content) {
-          console.log('Background: Parsing script:', content);
           const actions = parseScript(content);
-          console.log('BG actions after parsing : ', actions);
-          console.log('Background: Executing actions');
-          await executeActions(actions, tabInstance, index);
-          console.log('Background: Script execution completed');
-          sendResponse({ success: true });
-        } else {
-          console.error('Background: No content provided');
-          sendResponse({ success: false, error: 'No content provided' });
+          
+          const state = await executeActions(actions, tabInstance, index);
+          if(state === ScriptState.FINISHED){
+            const scrape = await getKeyValue("scraped_data");
+            const userData = await getKeyValue("user");
+            console.log("userdata from key value storage", userData);
+            const scoreData = {
+              script_id: script_id,
+              owner: userData.address, 
+              content: scrape, 
+              timestamp: Math.floor(Date.now() / 1000).toString(), // current timestamp
+              owner_sig: "38794c92e88f709d081f4fd97e46bf9d5ca3921862a8108cfa1204cd09b09d21",
+              
+          };
+          try {
+            const response = await apiRequest<any>(
+                'POST',
+                'score/submit',
+                scoreData
+            );
+        
+            response["address"] = userData.address;
+            response["script_id"] = script_id;
+        
+            try {
+                const script_play = await apiRequest<any>('POST', 'script_play/script-execute', 
+                    response);
+        
+                console.log('Background: Script execution completed', response);
+                console.log("Call Script Play API", script_play);
+                sendResponse({ success: true });
+            } catch (scriptError) {
+                console.error('Error executing script:', scriptError);
+                await chrome.storage.local.remove('scraped_data');
+                sendResponse({ success: false, error: scriptError.message });
+                throw scriptError;
+            }
+        } catch (scoreError) {
+            console.error('Error submitting score:', scoreError);
+            await chrome.storage.local.remove('scraped_data');
+            sendResponse({ success: false, error: scoreError.message });
+            throw scoreError;
         }
+            
+        }
+      }
       } catch (error) {
         console.error('Background: Script execution error:', error);
         sendResponse({ success: false, error: (error as Error).message });
@@ -405,11 +623,8 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   if (request.action === 'inferLLM') {
     (async () => {
       try {
-        console.log("what is request", request);
         const { prompt } = request;
-        console.log("prompt from line 640", prompt);
         const result = await askAi(prompt);
-        console.log("result from line 642", result);
         sendResponse({ success: true, index: result });
       } catch (error) {
         sendResponse({ success: false, error: (error as Error).message });

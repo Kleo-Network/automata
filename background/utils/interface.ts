@@ -1,8 +1,8 @@
-export type Action = 'open-tab' | 'input' | 'click' | 'infer' | 'wait' | 'select' | 'open' | 'login' | 'fetch';
+export type Action = 'open-tab' | 'input' | 'click' | 'infer' | 'wait' | 'select' | 'open' | 'login' | 'fetch' | 'while';
 
 export interface ScriptAction {
-  type: Action;
-  params: string[];
+  type: any;
+  params: any[];
   stepIndex: number;
   status: STEP_STATUS;
   message: string;

@@ -1,5 +1,3 @@
-// common/hooks/useFetch.ts
-
 import { Method } from 'axios';
 import { useEffect, useState } from 'react';
 
@@ -34,13 +32,17 @@ export enum FetchStatus {
   PROCESSING = 'processing',
 }
 
-function useFetch<T>(url?: string, options?: Options<T>): FetchResponse<T> {
+function useFetch<T>(
+  url?: string, 
+  options?: Options<T>, 
+  dependencies: any[] = []
+): FetchResponse<T> {
   const [data, setData] = useState<T | null>(null);
   const [status, setStatus] = useState<FetchStatus>(FetchStatus.IDLE);
   const [error, setError] = useState<any>(null);
   const [controller, setController] = useState<AbortController | null>(null);
   const baseUrl = 'http://127.0.0.1:8000/api/v1';
-  //åconst baseUrl = 'https://fastapi.kleo.network/api/v1';
+  //const baseUrl = 'https://fastapi.kleo.network/api/v1';
   
   function getToken(): Promise<string> {
     return new Promise((resolve, reject) => {
@@ -56,9 +58,10 @@ function useFetch<T>(url?: string, options?: Options<T>): FetchResponse<T> {
   }
 
   const fetchData = async (url: string, options?: Options<T>): Promise<T | undefined> => {
-    if (url === '') {
+    if (!url) {
       return;
     }
+    
     const token = await getToken();
     setStatus(FetchStatus.LOADING);
     options = {
@@ -127,7 +130,7 @@ function useFetch<T>(url?: string, options?: Options<T>): FetchResponse<T> {
     return () => {
       newController.abort();
     };
-  }, []);
+  }, [url, ...dependencies]); // Add url and dependencies to the dependency array
 
   return { data, status, error, fetchData: fetchDataManually };
 }

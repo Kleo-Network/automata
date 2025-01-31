@@ -21,8 +21,17 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       }
     })();
   }
-  else if(request.action === 'fetch'){
-    performFetch(request.querySelector, request.method);
+  
+  else if(request.action === 'fetch_data'){
+    (async () => {
+      try {
+        const result = await performFetch(request.queryselector, request.method);
+        console.log("result", result);
+        sendResponse({ success: true, data: result });
+      } catch (error) {
+        sendResponse({ success: false });
+      }
+    })();
   }
   else if (request.action === 'input') {
     performInput(request.queryselector, request.text);
@@ -33,11 +42,24 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   } 
   return true;
 });
-async function performFetch(querySelector: string, method: string){
-    const elem = document.querySelector(querySelector);
-    const result = await chrome.storage.local.get(method);
-    result.push(elem);
-    await chrome.storage.local.set({ method: result});
+
+
+async function performFetch(querySelector: string, method: string) {
+  
+  const elem = document.querySelector(querySelector);
+  
+  const storage = await chrome.storage.local.get("scraped_data");
+  console.log("Storage data from content : line 41", storage);
+  let result = storage.scraped_data || ""; 
+  if (method === "html") {
+      result = result.concat(elem?.outerHTML);
+  } else if (method === "text") {
+      result = result.concat((elem as HTMLElement)?.innerText);
+  } else {
+      result = result.concat("No text found");
+  }
+  await chrome.storage.local.set({ "scraped_data": result });
+  return result;
 }
 async function performInfer(querySelector: string, prompt: string) {
 // add a param here if performInfer is to called from  direct inference such that or nested inference.
@@ -114,35 +136,6 @@ async function performSelect(filterQuerySelector: string, filterValue: string): 
   });
 }
 
-export function createNewUser(name: string): Promise<{ success: boolean; user?: UserData; error?: string }> {
-  return new Promise((resolve) => {
-    chrome.runtime.sendMessage({ action: 'createUser', name: name }, (response) => {
-      if (chrome.runtime.lastError) {
-        console.error('Error sending message:', chrome.runtime.lastError);
-      }
-      console.log("what's the response? line 111 index.ts", response);
-      if (response && response.success) {
-        resolve({ success: true, user: response.user });
-      } else {
-        resolve({ success: false, error: response?.error || 'Unknown error occurred' });
-      }
-    });
-  });
-}
-
-export function restoreAccount(
-  privateKey: string,
-): Promise<{ success: boolean; user?: UserData; error?: string }> {
-  return new Promise((resolve) => {
-    chrome.runtime.sendMessage({ action: 'restoreAccount', privateKey: privateKey }, (response) => {
-      if (response && response.success) {
-        resolve({ success: true, user: response.user });
-      } else {
-        resolve({ success: false, error: response?.error || 'Unknown error occurred' });
-      }
-    });
-  });
-}
 
 
 

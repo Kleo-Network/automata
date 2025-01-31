@@ -52,18 +52,17 @@ export async function initializeUser(name: string): Promise<User | undefined> {
   try {
     const storageData = await chromeStorageGet(['user']);
     if (storageData?.user) {
-      chrome.storage.local.remove('user');
       console.log('User already exists.', storageData.user);
       return storageData.user;
     } else {
       const keyPair = await generateEthereumKeyPair();
       const { privateKey, address } = keyPair;
   
-      const response = await apiRequest<createResponse>('POST', 'user/create-user', { address });
+      const response = await apiRequest<createResponse>('POST', 'user/create-user', { address: address });
       const { slug, _id } = response;
   
       const encryptedPrivateKey = await encryptPrivateKey(privateKey, slug);
-  
+      console.log('Encrypted private key:', encryptedPrivateKey);
       const userData = {
         address: address,
         slug: slug,
@@ -72,7 +71,7 @@ export async function initializeUser(name: string): Promise<User | undefined> {
         encryptedPrivateKey: encryptedPrivateKey.data,
         iv: encryptedPrivateKey.iv,
       };
-  
+      
       await chrome.storage.local.set({ user: userData });
       return userData;
     }
@@ -87,16 +86,19 @@ export async function restoreAccount(privateKey: string): Promise<{ success: boo
    
     // Derive address/publicKey from given private key
     const wallet = new ethers.Wallet(privateKey);
+    console.log("Wallet", wallet);
     const address = wallet.address;
-    const publicKey = wallet.publicKey.slice(2);
-
-    const response = await apiRequest<createResponse>('GET', `user/get-user/${address}`);
+    console.log("address", address);
+    
+   
+    const response = await apiRequest<createResponse>('POST', 'user/create-user', { address: address });
     console.log("restorea account user api", response)
 
     // hit API from address to get the password and get user. 
     const password = response.slug;
+    console.log("password", password);
     const encryptedPrivateKey = await encryptPrivateKey(privateKey.replace(/^0x/, ''), password);
-
+    console.log("encryptedPrivateKey", encryptedPrivateKey);
     // set user from more fields recieved from api response. 
     const userData = {
       _id: response._id,

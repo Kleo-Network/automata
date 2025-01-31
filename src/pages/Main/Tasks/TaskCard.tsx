@@ -10,7 +10,8 @@ export interface TaskCardProps {
   rating: number;
   creator: string;
   id: string;
-  showPlayButton?: boolean;
+  status: 'pending' | 'completed' | 'processing';
+  item_url: string;
 }
 
 export const TaskCard = ({
@@ -22,15 +23,43 @@ export const TaskCard = ({
   rating,
   creator,
   id,
-  showPlayButton = true
+  status,
+  item_url
 }: TaskCardProps) => {
-  // const scriptInput = "new-tab#https://amazon.in\nwait\ninput#id#twotabsearchtextbox#ps5\nclick#id#nav-search-submit-button\nwait\ninfer#class#s-search-results#data-component-type#s-search-result\nwait\nclick#id#buy-now-button"
-  // Handlers for state transitions
   const navigate = useNavigate();
   const handleViewTask = () => navigate(`/app/task/${id}`);
 
+  const renderActionButton = () => {
+    switch (status) {
+      case 'pending':
+        return (
+          <button
+            className="bg-primary-600 text-white px-4 py-2 rounded-md w-full hover:bg-primary-800 flex gap-3 justify-center items-center"
+            onClick={handleViewTask}
+          >
+            Play Script
+          </button>
+        );
+      case 'processing':
+        return (
+          <div className="bg-yellow-100 text-yellow-800 px-4 py-2 rounded-md w-full text-center">
+            ⚙ Processing your data
+          </div>
+        );
+      case 'completed':
+        return (
+          <div className="bg-green-100 text-green-800 px-4 py-2 rounded-md w-full text-center">
+            <a href={`https://vanascan.io/tx/${item_url}`} target="_blank" rel="noopener noreferrer">
+              Data Owned 🔥 & KDAT Tokens Deposited
+            </a></div >
+        );
+      default:
+        return null;
+    }
+  };
+
   return (
-    <div className={`bg-white rounded-lg shadow-md w-full p-3.5 flex flex-col gap-3 ${showPlayButton ? 'mb-4' : ''}`}>
+    <div className="bg-white rounded-lg shadow-md w-full p-3.5 flex flex-col gap-3 mb-4">
       {/* Favicon + Title + Creator + Rating Row */}
       <div className="flex gap-4">
         <div className="min-h-12 min-w-12 bg-grayblue-100 rounded-md p-3 flex items-center justify-center">
@@ -38,9 +67,7 @@ export const TaskCard = ({
         </div>
         <div className="flex flex-col flex-1 gap-1">
           <div className="flex py-1 gap-2 justify-between">
-            {/* Title */}
             <h2 className="font-semibold text-base">{title}</h2>
-            {/* Rating */}
             <div className="h-fit flex items-center gap-1 px-2 py-1 rounded-full bg-grayblue-100 min-w-fit">
               <img
                 src="../../assets/images/Tasks/yellowStarIcon.svg"
@@ -54,10 +81,8 @@ export const TaskCard = ({
         </div>
       </div>
 
-      {/* Description Row */}
       <div className="w-full text-xs">{description}</div>
 
-      {/* Stats Pills */}
       <div className="flex gap-2 flex-wrap mb-[1px]">
         {stats.map((stat) => (
           <StatPill
@@ -69,17 +94,9 @@ export const TaskCard = ({
         ))}
       </div>
 
-      {/* Action Buttons */}
-      {showPlayButton &&
-        <div className="flex justify-center font-medium w-full">
-          <button
-            className="bg-primary-600 text-white px-4 py-2 rounded-md w-full hover:bg-primary-800 flex gap-3 justify-center items-center"
-            onClick={handleViewTask}
-          >
-            View Script
-          </button>
-        </div>
-      }
+      <div className="flex justify-center font-medium w-full">
+        {renderActionButton()}
+      </div>
     </div>
   );
 };
@@ -97,9 +114,10 @@ export const StatPill = ({ label, value, iconSrc }: StatPillProps) => {
         <img src={iconSrc} alt="" className="size-[12px]" />
       </div>
       <div className='grid place-items-center'>
-        <p className="text-center text-[10px] ">
+        <p className="text-center text-[10px]">
           <span className="font-bold">{label}</span> {value}
-        </p></div>
+        </p>
+      </div>
     </div>
   );
 };
