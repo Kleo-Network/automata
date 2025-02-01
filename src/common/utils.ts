@@ -180,8 +180,8 @@ export function convertTimeStampToDateString(timeStamp: number) {
 import axios, { AxiosRequestConfig, AxiosResponse } from 'axios';
 
 // Set the base URL for your API
-const BASE_URL = 'http://127.0.0.1:8000/api/v1';
-//const BASE_URL = 'https://fastapi.kleo.network/api/v1';
+// const BASE_URL = 'http://127.0.0.1:8000/api/v1';
+const BASE_URL = 'https://fastapi.kleo.network/api/v1';
 
  // Replace this with your actual base URL
 

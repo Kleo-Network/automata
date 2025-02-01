@@ -41,8 +41,8 @@ function useFetch<T>(
   const [status, setStatus] = useState<FetchStatus>(FetchStatus.IDLE);
   const [error, setError] = useState<any>(null);
   const [controller, setController] = useState<AbortController | null>(null);
-  const baseUrl = 'http://127.0.0.1:8000/api/v1';
-  //const baseUrl = 'https://fastapi.kleo.network/api/v1';
+  // const baseUrl = 'http://127.0.0.1:8000/api/v1';
+  const baseUrl = 'https://fastapi.kleo.network/api/v1';
   
   function getToken(): Promise<string> {
     return new Promise((resolve, reject) => {
