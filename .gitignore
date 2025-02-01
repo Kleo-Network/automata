@@ -24,3 +24,5 @@ yarn-debug.log*
 yarn-error.log*
 
 *.zip
+background.html
+app.html
