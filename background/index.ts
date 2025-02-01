@@ -228,13 +228,13 @@ async function executeActions(actions: ScriptAction[], tabInstance: chrome.tabs.
           if(tabInstance && tabInstance.id){
             const sessionState = action.params[1];
             console.log("The credentials from login for sessionState is"  , sessionState);
-            if(sessionState && sessionState.toString().toLowerCase() === "false"){
-               sendUpdate('Credentials required', i, STEP_STATUS.CREDS_REQUIRED, actions, true, tabInstance);
-               console.log('Background: Credentials required');
-               return ScriptState.PAUSED;
+            if(sessionState && sessionState.toString().toLowerCase() === "true"){
+              sendUpdate('Login Completed', i, STEP_STATUS.SUCCESS, actions, false, tabInstance);
             }
             else{
-              sendUpdate('Login Completed', i, STEP_STATUS.SUCCESS, actions, false, tabInstance);
+              sendUpdate('Credentials required', i, STEP_STATUS.CREDS_REQUIRED, actions, true, tabInstance);
+              console.log('Background: Credentials required');
+              return ScriptState.PAUSED;
             }
           }
           break;
