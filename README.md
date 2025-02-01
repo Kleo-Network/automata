@@ -1,4 +1,4 @@
-# Chrome Extension Documentation
+# Automata Kleo Documentation
 
 ## To Do List Scope
 - Implement form filling automation with LLM integration
