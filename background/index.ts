@@ -114,13 +114,13 @@ function parseScript(script: string): ScriptAction[] {
 function parseSingleLine(line: string, lineIndex: number): ScriptAction {
   const parts = splitOutsideParenthesesAndQuotes(line);
   const [type, ...rawParams] = parts;
-  
+
   const sanitizedParams = rawParams.map(param => {
     let cleaned = param.trim();
     if (cleaned.startsWith('"') && cleaned.endsWith('"')) {
       cleaned = cleaned.slice(1, -1);
     }
-    return cleaned;
+    return parseParameter(cleaned, lineIndex);
   });
 
   return {
@@ -226,7 +226,7 @@ async function executeActions(actions: ScriptAction[], tabInstance: chrome.tabs.
       switch (action.type) {
         case 'login':
           if(tabInstance && tabInstance.id){
-            const sessionState = action.params[1];
+            const sessionState = action.params[0];
             console.log("The credentials from login for sessionState is"  , sessionState);
             if(sessionState && sessionState.toString().toLowerCase() === "true"){
               sendUpdate('Login Completed', i, STEP_STATUS.SUCCESS, actions, false, tabInstance);
