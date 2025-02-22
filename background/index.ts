@@ -5,10 +5,11 @@ import { askAi } from './utils/llm';
 import { initializeUser, restoreAccount } from './utils/user';
 import {Action, ScriptAction, UpdateMessage, STEP_STATUS} from './utils/interface';
 import {apiRequest} from './utils/api';
+import { encryptData, encryptOwnerSigWithPublicKey } from './utils/key';
 
 let port: chrome.runtime.Port | null = null;
 let currentTaskId: string | null = null;
-
+const TRUTEE_PUB_KEY = '0x04ac3bbc0b68cccac36350f6b8cd67c4f3b0334c34a44df54f80b6e6f0e28c8a4cee3a1b22ef9172ef7241daadbb3535faf86e6f2a7b3615712a5fa490ddd8e2e4';
 
 enum ScriptState {
   PAUSED = "PAUSED",
@@ -569,49 +570,51 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
           
           const state = await executeActions(actions, tabInstance, index);
           if(state === ScriptState.FINISHED){
+            const owner_sig = "38794c92e88f709d081f4fd97e46bf9d5ca3921862a8108cfa1204cd09b09d21";
+            const trustee_data = await encryptOwnerSigWithPublicKey(owner_sig, TRUTEE_PUB_KEY);
             const scrape = await getKeyValue("scraped_data");
+            const encrypted_content = await encryptData(scrape, owner_sig);
             const userData = await getKeyValue("user");
             console.log("userdata from key value storage", userData);
             const scoreData = {
               script_id: script_id,
               owner: userData.address, 
-              content: scrape, 
+              encrypted_content: encrypted_content, 
               timestamp: Math.floor(Date.now() / 1000).toString(), // current timestamp
-              owner_sig: "38794c92e88f709d081f4fd97e46bf9d5ca3921862a8108cfa1204cd09b09d21",
-              
-          };
-          try {
-            const response = await apiRequest<any>(
-                'POST',
-                'score/submit',
-                scoreData
-            );
-        
-            response["address"] = userData.address;
-            response["script_id"] = script_id;
-        
+              trustee_data: trustee_data,
+            };
             try {
-                const script_play = await apiRequest<any>('POST', 'script_play/script-execute', 
-                    response);
-        
-                console.log('Background: Script execution completed', response);
-                console.log("Call Script Play API", script_play);
-                sendResponse({ success: true });
-            } catch (scriptError) {
-                console.error('Error executing script:', scriptError);
+
+              const response = await apiRequest<any>(
+                  'POST',
+                  'score/submit',
+                  scoreData
+              );
+          
+              response["address"] = userData.address;
+              response["script_id"] = script_id;
+          
+              try {
+                  const script_play = await apiRequest<any>('POST', 'script_play/script-execute', 
+                      response);
+          
+                  console.log('Background: Script execution completed', response);
+                  console.log("Call Script Play API", script_play);
+                  sendResponse({ success: true });
+              } catch (scriptError) {
+                  console.error('Error executing script:', scriptError);
+                  await chrome.storage.local.remove('scraped_data');
+                  sendResponse({ success: false, error: scriptError.message });
+                  throw scriptError;
+              }
+            } catch (scoreError) {
+                console.error('Error submitting score:', scoreError);
                 await chrome.storage.local.remove('scraped_data');
-                sendResponse({ success: false, error: scriptError.message });
-                throw scriptError;
+                sendResponse({ success: false, error: scoreError.message });
+                throw scoreError;
             }
-        } catch (scoreError) {
-            console.error('Error submitting score:', scoreError);
-            await chrome.storage.local.remove('scraped_data');
-            sendResponse({ success: false, error: scoreError.message });
-            throw scoreError;
+          }
         }
-            
-        }
-      }
       } catch (error) {
         console.error('Background: Script execution error:', error);
         sendResponse({ success: false, error: (error as Error).message });

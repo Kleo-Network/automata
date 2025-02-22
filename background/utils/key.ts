@@ -1,4 +1,6 @@
 // background/utils/key.ts
+import * as eccrypto from "@toruslabs/eccrypto";
+import { Buffer } from "buffer";
 
 import { ethers } from "ethers";
 // Make sure to include ethers.js in your project
@@ -57,7 +59,48 @@ export async function encryptPrivateKey(privateKeyHex, password) {
     };
 }
 
+export async function encryptOwnerSigWithPublicKey(data: string, publicKey: string): Promise<string> {
+    const publicKeyBytes = Buffer.from(publicKey.startsWith("0x") ? publicKey.slice(2) : publicKey, "hex");
+    const uncompressedKey = publicKeyBytes.length === 64 ? Buffer.concat([Buffer.from([4]), publicKeyBytes]) : publicKeyBytes;
+    const fixed_iv = Buffer.from(crypto.getRandomValues(new Uint8Array(16)));
+    const fixed_ephemeral_key = Buffer.from(crypto.getRandomValues(new Uint8Array(32)));
+
+    const encryptedBuffer = await eccrypto.encrypt(uncompressedKey, Buffer.from(data), {
+      iv: fixed_iv,
+      ephemPrivateKey: fixed_ephemeral_key,
+    });
+    const encryptedHex = Buffer.concat([encryptedBuffer.iv, encryptedBuffer.ephemPublicKey, encryptedBuffer.ciphertext, encryptedBuffer.mac]).toString("hex");
+    return encryptedHex;
+};
+
+export async function encryptData(data: string, key: string) {
+    const enc = new TextEncoder();
+    const keyData = Buffer.from(key.startsWith("0x") ? key.slice(2) : key, "hex");
+    const iv = crypto.getRandomValues(new Uint8Array(16)); // 128-bit IV for AES-CBC
+    const keyMaterial = await crypto.subtle.importKey(
+        'raw',
+        keyData,
+        'AES-CBC',
+        false,
+        ['encrypt']
+    );
+    const encryptedData = await crypto.subtle.encrypt(
+        {
+            name: 'AES-CBC',
+            iv: iv
+        },
+        keyMaterial,
+        enc.encode(data)
+    );
+    console.log("encryptedData", encryptedData);
+    console.log("iv", iv);
+
+    const encodedData = arrayBufferToBase64([...new Uint8Array(iv), ...new Uint8Array(encryptedData)]);
+    return encodedData;
+}
+
 function arrayBufferToBase64(buffer) {
+    console.log("buffer", buffer);
     return btoa(String.fromCharCode(...new Uint8Array(buffer)));
 }
 
